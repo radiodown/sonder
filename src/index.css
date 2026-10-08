@@ -1,0 +1,303 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --color-accent: var(--accent);
+  --color-ink: var(--text);
+  --color-ink-2: var(--text-2);
+  --color-ink-3: var(--text-3);
+  --color-line: var(--line);
+  --color-surface: var(--surface);
+  --color-fill: var(--fill);
+}
+
+/* ───────────── 디자인 토큰 ───────────── */
+:root {
+  color-scheme: light;
+  --accent: #007aff;
+  --text: #1d1d1f;
+  --text-2: rgb(60 60 67 / 0.72);
+  --text-3: rgb(60 60 67 / 0.45);
+  --line: rgb(0 0 0 / 0.09);
+  --fill: rgb(120 120 128 / 0.12);
+  --surface: rgb(246 246 248 / 0.86);
+  --app-bg: #f2f2f7;
+
+  /* glass */
+  --glass-tint: rgb(255 255 255 / 0.22);
+  --glass-tint-strong: rgb(255 255 255 / 0.55);
+  --glass-edge: rgb(0 0 0 / 0.06);
+  --glass-shadow: rgb(0 0 0 / 0.18);
+
+  /* 책등 보기의 선반 선 */
+  --shelf-line: rgb(0 0 0 / 0.14);
+
+  --scroll-thumb: rgb(0 0 0 / 0.26);
+  --scroll-thumb-hover: rgb(0 0 0 / 0.45);
+  --glass-blur: 16px;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --accent: #0a84ff;
+  --text: #f5f5f7;
+  --text-2: rgb(235 235 245 / 0.66);
+  --text-3: rgb(235 235 245 / 0.36);
+  --line: rgb(255 255 255 / 0.1);
+  --fill: rgb(120 120 128 / 0.26);
+  --surface: rgb(30 30 34 / 0.86);
+  --app-bg: #000;
+
+  --glass-tint: rgb(40 40 46 / 0.32);
+  --glass-tint-strong: rgb(44 44 50 / 0.62);
+  --glass-edge: rgb(255 255 255 / 0.08);
+  --glass-shadow: rgb(0 0 0 / 0.5);
+
+  --shelf-line: rgb(255 255 255 / 0.16);
+
+  --scroll-thumb: rgb(255 255 255 / 0.28);
+  --scroll-thumb-hover: rgb(255 255 255 / 0.5);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--text);
+  background: var(--app-bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable],
+[data-selectable] {
+  user-select: text;
+}
+
+/* ───────────── Liquid Glass ─────────────
+   1) 블러+채도  2) 스펙큘러 테두리/하이라이트  3) (Chromium) SVG 굴절 */
+@layer base {
+  /* 기본은 relative. fixed/absolute 같은 유틸리티를 주면 그쪽이 이깁니다 */
+  :where(.glass) {
+    position: relative;
+  }
+}
+
+@utility glass {
+  isolation: isolate;
+  background: var(--glass-tint);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  box-shadow:
+    inset 0 0 0 0.5px var(--glass-edge),
+    0 10px 30px -10px var(--glass-shadow);
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      140deg,
+      rgb(255 255 255 / 0.65),
+      rgb(255 255 255 / 0.08) 35%,
+      rgb(255 255 255 / 0) 60%,
+      rgb(255 255 255 / 0.3)
+    );
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+  }
+}
+
+/* 화면 가장자리에 붙는 바(메뉴바 등): 테두리 없음 */
+@utility glass-flat {
+  box-shadow: none;
+  &::after {
+    display: none;
+  }
+}
+
+@utility glass-strong {
+  background: var(--glass-tint-strong);
+}
+
+/* 굴절: Chromium 에서만 backdrop-filter 의 url() 이 그려집니다 */
+html[data-refract="on"] .glass-refract {
+  backdrop-filter: blur(2px) url(#lg-refract) blur(calc(var(--glass-blur) - 6px)) saturate(180%);
+}
+
+/* 창/패널 콘텐츠: 거의 불투명한 표면 */
+@utility surface {
+  background: var(--surface);
+  backdrop-filter: blur(40px) saturate(180%);
+}
+
+/* ───────────── 스크롤바 (macOS 오버레이 느낌) ─────────────
+   얇고 둥근 막대가 트랙 없이 떠 있고, 스크롤하는 동안과 막대에 마우스를 올렸을 때만 보입니다.
+   (Chromium 은 부모의 :hover 변화로는 스크롤바를 다시 그리지 않아서 hover 대신 스크롤 상태를 씁니다)
+   Chromium/Safari 는 ::-webkit-scrollbar, Firefox 는 표준 속성으로 처리합니다.
+   (Chromium 에서 scrollbar-color 를 같이 쓰면 ::-webkit-scrollbar 가 무시되므로 분리) */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+    background: transparent;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 8px; /* 창의 둥근 모서리에 닿지 않게 */
+  }
+  ::-webkit-scrollbar-thumb {
+    min-height: 40px;
+    border: 3.5px solid transparent;
+    border-radius: 999px;
+    background-color: transparent;
+    background-clip: padding-box;
+  }
+  /* 스크롤하는 동안 표시 (lib/scrollbars.js 가 data-scrolling 을 붙였다 뗍니다) */
+  [data-scrolling]::-webkit-scrollbar-thumb {
+    background-color: var(--scroll-thumb);
+  }
+  ::-webkit-scrollbar-thumb:hover,
+  ::-webkit-scrollbar-thumb:active {
+    border-width: 2.5px;
+    background-color: var(--scroll-thumb-hover);
+  }
+  ::-webkit-scrollbar-corner,
+  ::-webkit-scrollbar-button {
+    display: none;
+    background: transparent;
+  }
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  @layer base {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
+    [data-scrolling] {
+      scrollbar-color: var(--scroll-thumb) transparent;
+    }
+  }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ───────────── 배경화면 ───────────── */
+.wallpaper-sequoia {
+  background:
+    radial-gradient(60% 80% at 15% 20%, #4f7cff 0%, transparent 60%),
+    radial-gradient(50% 60% at 85% 15%, #b05bff 0%, transparent 60%),
+    radial-gradient(70% 70% at 70% 85%, #ff7a45 0%, transparent 60%),
+    radial-gradient(60% 60% at 20% 90%, #13c2c2 0%, transparent 60%),
+    #1b1f3b;
+}
+.wallpaper-sunset {
+  background:
+    radial-gradient(70% 70% at 20% 10%, #ffd166 0%, transparent 60%),
+    radial-gradient(60% 70% at 90% 30%, #ef476f 0%, transparent 60%),
+    radial-gradient(80% 60% at 40% 100%, #7b2cbf 0%, transparent 65%),
+    #f78c6b;
+}
+.wallpaper-aurora {
+  background:
+    radial-gradient(60% 50% at 30% 30%, #2af598 0%, transparent 60%),
+    radial-gradient(60% 60% at 80% 60%, #009efd 0%, transparent 60%),
+    radial-gradient(50% 50% at 20% 85%, #8e2de2 0%, transparent 60%),
+    #071a2c;
+}
+.wallpaper-graphite {
+  background:
+    radial-gradient(70% 70% at 25% 25%, #5b5f6b 0%, transparent 60%),
+    radial-gradient(60% 60% at 80% 80%, #2c2f36 0%, transparent 60%),
+    #17181c;
+}
+
+/* ───────────── 독후감 본문 (TipTap) ───────────── */
+.review-prose {
+  outline: none;
+  font-size: 16px; /* iOS 는 16px 미만 입력란에 포커스하면 화면을 확대합니다 */
+  line-height: 1.75;
+  min-height: 12rem;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.review-prose > * + * {
+  margin-top: 0.75em;
+}
+.review-prose h2 {
+  margin-top: 1.4em;
+  font-size: 1.35em;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.review-prose h3 {
+  margin-top: 1.2em;
+  font-size: 1.12em;
+  font-weight: 700;
+}
+.review-prose ul {
+  padding-left: 1.4em;
+  list-style: disc;
+}
+.review-prose ol {
+  padding-left: 1.4em;
+  list-style: decimal;
+}
+.review-prose li + li {
+  margin-top: 0.25em;
+}
+.review-prose li p {
+  margin: 0;
+}
+.review-prose blockquote {
+  padding: 0.1em 0 0.1em 1em;
+  border-left: 3px solid var(--accent);
+  color: var(--text-2);
+}
+.review-prose hr {
+  margin: 1.6em 0;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+.review-prose code {
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+  background: var(--fill);
+  font-size: 0.9em;
+}
+.review-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+/* iOS safe-area */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
