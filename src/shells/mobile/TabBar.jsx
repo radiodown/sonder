@@ -16,9 +16,9 @@ export function TabBar({ current, hidden, onTab }) {
       initial={false}
       animate={{ y: hidden ? 140 : 0, opacity: hidden ? 0 : 1 }}
       transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-      className="tabbar-bottom pointer-events-none fixed inset-x-0 bottom-0 z-30 flex items-end gap-3 px-5"
+      className="tabbar-bottom pointer-events-none fixed inset-x-0 bottom-0 z-30 flex items-end justify-center gap-3 px-6"
     >
-      <Glass refract className="pointer-events-auto mb-2 flex h-[62px] flex-1 items-center rounded-full p-1">
+      <Glass refract className="pointer-events-auto mb-2 flex h-[54px] max-w-[400px] flex-1 items-center rounded-full p-1">
         {TABS.map(({ path, label, Icon }) => {
           const active = current === path
           return (
@@ -26,7 +26,7 @@ export function TabBar({ current, hidden, onTab }) {
               key={path}
               onClick={() => onTab(path)}
               aria-current={active ? 'page' : undefined}
-              className={`relative flex h-full flex-1 flex-col items-center justify-center gap-0.5 rounded-full transition-colors ${active ? 'text-accent' : 'text-ink'}`}
+              className={`relative flex h-full flex-1 flex-col items-center justify-center gap-px rounded-full transition-colors ${active ? 'text-accent' : 'text-ink'}`}
             >
               {active && (
                 <motion.span
@@ -35,8 +35,8 @@ export function TabBar({ current, hidden, onTab }) {
                   transition={{ type: 'spring', stiffness: 500, damping: 36 }}
                 />
               )}
-              <Icon size={24} weight={active ? 'fill' : 'regular'} className="relative" />
-              <span className="relative text-[10px] font-semibold">{label}</span>
+              <Icon size={21} weight={active ? 'fill' : 'regular'} className="relative" />
+              <span className="relative text-[9.5px] font-semibold">{label}</span>
             </button>
           )
         })}

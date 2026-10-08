@@ -333,6 +333,12 @@ html[data-refract="on"] .glass-refract {
 .tabbar-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }
+/* iOS 26.0 홈 화면 앱 버그: 뷰포트 높이를 Safari 주소창이 있는 것처럼 계산해서
+   position: fixed; bottom: 0 이 화면 맨 아래에 닿지 않습니다. 문서를 상단 안전 영역만큼 늘려 바로잡습니다.
+   (Safari 26.1 베타에서 고쳐졌다고 함) */
+html[data-standalone] {
+  min-height: calc(100% + env(safe-area-inset-top));
+}
 [data-standalone] .tabbar-bottom {
   padding-bottom: max(calc(env(safe-area-inset-bottom) - 20px), 0px);
 }
