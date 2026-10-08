@@ -11,7 +11,7 @@ export function useThemeSync() {
     const apply = () => {
       const dark = theme === 'dark' || (theme === 'system' && mq.matches)
       document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#000000' : '#f2f2f7')
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#161618' : '#f2f2f7')
     }
     apply()
     mq.addEventListener('change', apply)

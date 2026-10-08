@@ -79,10 +79,10 @@ function ManualForm({ onAdded }) {
   )
 }
 
-/** 책 검색 후 추가. onAdded(id) 는 추가 직후 호출됩니다. */
-export function AddBook({ onAdded, autoFocus = true }) {
-  const [input, setInput] = useState('')
-  const [query, setQuery] = useState('')
+/** 책 검색 후 추가. onAdded(id) 는 추가 직후 호출됩니다. initialQuery 를 주면 열자마자 그 검색어로 찾습니다. */
+export function AddBook({ onAdded, autoFocus = true, initialQuery = '' }) {
+  const [input, setInput] = useState(initialQuery)
+  const [query, setQuery] = useState(initialQuery.trim())
   const [manual, setManual] = useState(false)
   const owned = useLiveQuery(async () => new Set(await db.books.orderBy('isbn').uniqueKeys()), [], new Set())
 

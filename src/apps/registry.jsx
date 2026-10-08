@@ -1,9 +1,10 @@
-import { BooksIcon, GearSixIcon, MagnifyingGlassIcon, NotePencilIcon } from '@phosphor-icons/react'
+import { BooksIcon, ChartBarIcon, GearSixIcon, MagnifyingGlassIcon, NotePencilIcon } from '@phosphor-icons/react'
 import { AddBook } from './bookshelf/AddBook'
 import { BookDetail } from './bookshelf/BookDetail'
 import { ShelfWindow } from './bookshelf/ShelfWindow'
 import { ReviewsWindow } from './reviews/ReviewsWindow'
 import { Settings } from './settings/Settings'
+import { StatsWindow } from './stats/StatsView'
 
 /**
  * 앱 목록. 여기에 등록하면 Dock 과 Spotlight 에 나타납니다.
@@ -34,6 +35,16 @@ export const APPS = [
     titlebar: 'none',
     dock: true,
     Window: ReviewsWindow,
+  },
+  {
+    id: 'stats',
+    name: '통계',
+    Icon: ChartBarIcon,
+    tint: 'from-emerald-300 to-teal-600',
+    size: { width: 1060, height: 740 },
+    titlebar: 'none',
+    dock: true,
+    Window: StatsWindow,
   },
   {
     id: 'addBook',

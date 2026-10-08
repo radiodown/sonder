@@ -120,7 +120,7 @@ function scheduleAutoSave() {
 /** 책이나 독후감이 바뀌면 dirty 표시 후 자동 저장을 예약합니다. 앱 시작 시 한 번 호출합니다. */
 export function startDriveAutoSave() {
   let first = true
-  const watch = liveQuery(() => Promise.all([db.books.toArray(), db.reviews.toArray()])).subscribe(() => {
+  const watch = liveQuery(() => Promise.all([db.books.toArray(), db.reviews.toArray(), db.activity.count()])).subscribe(() => {
     if (first) {
       first = false
       if (useDrive.getState().dirty) scheduleAutoSave()

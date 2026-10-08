@@ -2,7 +2,7 @@ import { NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { useNav } from '../../lib/nav'
 import { toast } from 'sonner'
-import { STATUSES, deleteBook, updateBook } from '../../db/db'
+import { STATUSES, dayKey, deleteBook, updateBook } from '../../db/db'
 import { BookCover } from '../../ui/BookCover'
 import { Segmented } from '../../ui/Segmented'
 import { StarRating } from '../../ui/StarRating'
@@ -19,6 +19,23 @@ function Meta({ label, value }) {
         {value}
       </span>
     </div>
+  )
+}
+
+/** 시작일·완독일 고치기 (통계에 쓰입니다). 날짜만 고르면 그날 정오로 저장합니다. */
+function DateRow({ label, value, onChange, max }) {
+  const [today] = useState(() => dayKey(Date.now()))
+  return (
+    <label className="flex items-center justify-between gap-4 py-2 text-sm">
+      <span className="text-ink-2">{label}</span>
+      <input
+        type="date"
+        value={value ? dayKey(value) : ''}
+        max={max ? dayKey(max) : today}
+        onChange={(e) => e.target.value && onChange(new Date(`${e.target.value}T12:00`).getTime())}
+        className="rounded-md bg-transparent text-right font-medium outline-none [color-scheme:inherit] focus:ring-2 focus:ring-accent/50"
+      />
+    </label>
   )
 }
 
@@ -113,6 +130,12 @@ export function BookDetail({ bookId, onDeleted }) {
         <Meta label="쪽수" value={book.pageCount ? `${book.pageCount}쪽` : ''} />
         <Meta label="ISBN" value={book.isbn} />
         <Meta label="추가한 날" value={new Date(book.createdAt).toLocaleDateString('ko-KR')} />
+        {(book.status === 'reading' || book.status === 'done') && (
+          <DateRow label="시작한 날" value={book.startedAt} max={book.finishedAt} onChange={(startedAt) => updateBook(book.id, { startedAt })} />
+        )}
+        {book.status === 'done' && (
+          <DateRow label="다 읽은 날" value={book.finishedAt} onChange={(finishedAt) => updateBook(book.id, { finishedAt })} />
+        )}
       </section>
 
       <BookReviews bookId={book.id} />

@@ -1,10 +1,11 @@
 import * as DM from '@radix-ui/react-dropdown-menu'
-import { CaretDownIcon, CheckIcon, DotsThreeIcon, SquaresFourIcon } from '@phosphor-icons/react'
+import { CaretDownIcon, CheckIcon, DotsThreeIcon, PlusIcon, SquaresFourIcon } from '@phosphor-icons/react'
+import { useNav } from '../../lib/nav'
 import { Glass } from '../../ui/Glass'
 import { Segmented } from '../../ui/Segmented'
 import { SIZE_STEPS, SORTS, VIEWS, useShelfPrefs } from './shelfPrefs'
 
-const menuCls = 'glass glass-strong z-[10000] min-w-52 rounded-xl p-1.5 text-[13px] text-ink'
+const menuCls = 'glass glass-strong z-[10000] rounded-xl p-1.5 text-[13px] text-ink'
 const itemCls =
   'flex cursor-default items-center gap-2 rounded-md py-1.5 pl-7 pr-3 outline-none relative data-[disabled]:opacity-40 data-[highlighted]:bg-accent data-[highlighted]:text-white'
 
@@ -17,7 +18,6 @@ function RadioItems({ options, value, onChange }) {
             <CheckIcon size={13} weight="bold" />
           </DM.ItemIndicator>
           <span className="flex-1">{o.label}</span>
-          {o.hint && <span className="text-[11px] opacity-60">{o.hint}</span>}
         </DM.RadioItem>
       ))}
     </DM.RadioGroup>
@@ -43,7 +43,7 @@ export function DesktopShelfControls() {
           <CaretDownIcon size={10} weight="bold" />
         </DM.Trigger>
         <DM.Portal>
-          <DM.Content align="end" sideOffset={6} className={menuCls}>
+          <DM.Content align="end" sideOffset={6} className={`${menuCls} min-w-36`}>
             <MenuLabel>정렬</MenuLabel>
             <RadioItems options={SORTS} value={p.sort} onChange={p.setSort} />
           </DM.Content>
@@ -72,6 +72,7 @@ export function DesktopShelfControls() {
 /** 모바일: 제목 옆 ⋯ 버튼 하나에 보기 · 정렬 · 크기를 모읍니다 (iOS 파일 앱처럼) */
 export function MobileShelfMenu() {
   const p = useShelfPrefs()
+  const nav = useNav()
   return (
     <DM.Root modal={false}>
       <DM.Trigger asChild>
@@ -85,7 +86,11 @@ export function MobileShelfMenu() {
         </Glass>
       </DM.Trigger>
       <DM.Portal>
-        <DM.Content align="end" sideOffset={8} className={`${menuCls} min-w-60 text-[15px]`}>
+        <DM.Content align="end" sideOffset={8} className={`${menuCls} min-w-44 text-[15px]`}>
+          <DM.Item onSelect={() => nav.openAdd()} className={`${itemCls} font-medium`}>
+            <PlusIcon size={15} weight="bold" className="absolute left-2" />책 추가…
+          </DM.Item>
+          <DM.Separator className="mx-2 my-1 h-px bg-line" />
           <MenuLabel>보기</MenuLabel>
           <RadioItems
             options={VIEWS.map(({ value, label }) => ({ value, label }))}

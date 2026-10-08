@@ -1,4 +1,4 @@
-import { CaretLeftIcon, NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
+import { ArrowUpRightIcon, CaretLeftIcon, GlobeIcon, NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
 import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { useLocation, useMatch, useNavigate } from 'react-router'
@@ -16,6 +16,7 @@ import { useReviews } from '../../apps/reviews/hooks'
 import { LazyReviewEditor as ReviewEditor } from '../../apps/reviews/LazyReviewEditor'
 import { ReviewRow } from '../../apps/reviews/ReviewList'
 import { Settings } from '../../apps/settings/Settings'
+import { StatsView } from '../../apps/stats/StatsView'
 import { STATUSES, addReview, deleteReview } from '../../db/db'
 import { NavContext, useNav } from '../../lib/nav'
 import { Glass } from '../../ui/Glass'
@@ -25,21 +26,45 @@ import { TabBar } from './TabBar'
 
 const FILTERS = [{ value: 'all', label: '전체' }, ...STATUSES.map((s) => ({ value: s.id, label: s.label }))]
 
+/** 검색어가 있을 때 맨 위에 보이는 "온라인에서 찾기" 줄 */
+function OnlineSearchRow({ query, onSearch }) {
+  return (
+    <button
+      onClick={onSearch}
+      className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-3 text-left active:opacity-70 dark:bg-white/[0.07]"
+    >
+      <GlobeIcon size={22} className="shrink-0 text-accent" />
+      <span className="min-w-0 flex-1">
+        <span className="line-clamp-1 text-[15px] font-semibold">온라인에서 ‘{query}’ 찾기</span>
+        <span className="text-xs text-ink-2">책장에 없는 책을 검색해 추가합니다</span>
+      </span>
+      <ArrowUpRightIcon size={16} className="shrink-0 text-ink-3" />
+    </button>
+  )
+}
+
 function ShelfScreen() {
   const nav = useNav()
   const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
   const { sort } = useShelfPrefs()
-  const books = useBooks(filter, sort)
+  const books = useBooks(filter, sort, search)
+  const q = search.trim()
   return (
-    <Screen title="책장" trailing={<MobileShelfMenu />}>
+    <Screen
+      title="책장"
+      trailing={<MobileShelfMenu />}
+      search={{ value: search, onChange: setSearch, placeholder: '제목, 저자, 출판사' }}
+    >
       <div className="scrollbar-none overflow-x-auto px-5 pb-5">
         <Segmented options={FILTERS} value={filter} onChange={setFilter} size="sm" />
       </div>
       <div className="px-5">
-        {books?.length === 0 && filter === 'all' ? (
-          <EmptyShelf onAdd={nav.openAdd} />
+        {q && <OnlineSearchRow query={q} onSearch={() => nav.openAdd(q)} />}
+        {books?.length === 0 && filter === 'all' && !q ? (
+          <EmptyShelf onAdd={() => nav.openAdd()} />
         ) : books?.length === 0 ? (
-          <p className="py-16 text-center text-sm text-ink-2">책이 없습니다</p>
+          <p className="py-16 text-center text-sm text-ink-2">{q ? `‘${q}’에 맞는 책이 책장에 없어요` : '책이 없습니다'}</p>
         ) : (
           books && <ShelfView books={books} onOpen={nav.openBook} platform="mobile" />
         )}
@@ -56,7 +81,15 @@ function SettingsScreen() {
   )
 }
 
-const SCREENS = { '/': ShelfScreen, '/reviews': ReviewsScreen, '/settings': SettingsScreen }
+function StatsScreen() {
+  return (
+    <Screen title="통계">
+      <StatsView platform="mobile" />
+    </Screen>
+  )
+}
+
+const SCREENS = { '/': ShelfScreen, '/reviews': ReviewsScreen, '/stats': StatsScreen, '/settings': SettingsScreen }
 
 /**
  * push 된 화면. iOS 처럼 화면 왼쪽 가장자리에서 오른쪽으로 밀면 뒤로 갑니다.
@@ -101,10 +134,12 @@ function PushScreen({ onBack, trailing, z = 'z-20', children }) {
 
 function ReviewsScreen() {
   const nav = useNav()
-  const reviews = useReviews()
+  const [search, setSearch] = useState('')
+  const reviews = useReviews(search)
   return (
     <Screen
       title="독후감"
+      search={{ value: search, onChange: setSearch, placeholder: '제목, 내용, 책 이름' }}
       trailing={
         <Glass
           as="button"
@@ -118,7 +153,9 @@ function ReviewsScreen() {
       }
     >
       <div className="px-4">
-        {reviews?.length === 0 ? (
+        {reviews?.length === 0 && search.trim() ? (
+          <p className="py-16 text-center text-sm text-ink-2">‘{search.trim()}’에 맞는 독후감이 없어요</p>
+        ) : reviews?.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <NotePencilIcon size={44} className="text-ink-3" />
             <p className="text-sm text-ink-2">
@@ -170,6 +207,7 @@ export function MobileShell() {
   const reviewOnBook = useMatch('/book/:id/review/:rid')
   const reviewMatch = reviewOnly ?? reviewOnBook
   const [addOpen, setAddOpen] = useState(false)
+  const [addQuery, setAddQuery] = useState('')
   const [pickOpen, setPickOpen] = useState(false)
 
   // 상세 화면 아래에는 마지막으로 보던 탭을 그대로 둡니다
@@ -190,8 +228,11 @@ export function MobileShell() {
     const writeFor = async (bookId) => openReview(await addReview(bookId))
     return {
       openBook: (id) => navigate(`/book/${id}`),
-      openAdd: () => setAddOpen(true),
-      openApp: (id) => navigate(id === 'settings' ? '/settings' : id === 'reviews' ? '/reviews' : '/'),
+      openAdd: (query) => {
+        setAddQuery(typeof query === 'string' ? query : '')
+        setAddOpen(true)
+      },
+      openApp: (id) => navigate({ settings: '/settings', reviews: '/reviews', stats: '/stats' }[id] ?? '/'),
       openReview,
       newReview: (bookId) => (bookId ? writeFor(bookId) : setPickOpen(true)),
       writeFor,
@@ -258,8 +299,8 @@ export function MobileShell() {
         />
       </div>
 
-      <Sheet open={addOpen} onOpenChange={setAddOpen} title="책 검색">
-        <AddBook autoFocus={false} />
+      <Sheet open={addOpen} onOpenChange={setAddOpen} title="책 추가">
+        <AddBook autoFocus={false} initialQuery={addQuery} />
       </Sheet>
       <Sheet open={pickOpen} onOpenChange={setPickOpen} title="어떤 책의 독후감인가요?">
         <BookPicker

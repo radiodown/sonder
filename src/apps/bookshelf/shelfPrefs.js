@@ -10,7 +10,7 @@ export const VIEWS = [
 export const SORTS = [
   { value: 'recent', label: '최근 추가' },
   { value: 'title', label: '제목순' },
-  { value: 'publisher', label: '출판사순', hint: '출판사 → 저자 → 제목' },
+  { value: 'publisher', label: '출판사순' }, // 출판사 → 저자 → 제목 (hooks.js sortBooks)
 ]
 
 export const SIZE_STEPS = [

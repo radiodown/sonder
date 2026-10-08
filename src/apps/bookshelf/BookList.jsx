@@ -2,7 +2,8 @@ import { CaretDownIcon, CaretRightIcon, StarIcon } from '@phosphor-icons/react'
 import { statusLabel } from '../../db/db'
 import { BookCover } from '../../ui/BookCover'
 
-const STATUS_DOT = { want: 'bg-sky-500', reading: 'bg-orange-500', done: 'bg-green-500' }
+// 통계 차트와 같은 상태 색 (index.css 의 --viz-1~3)
+const STATUS_DOT = { want: 'bg-[var(--viz-1)]', reading: 'bg-[var(--viz-2)]', done: 'bg-[var(--viz-3)]' }
 
 function Stars({ value }) {
   if (!value) return <span className="text-ink-3">—</span>

@@ -34,6 +34,19 @@
   /* 책등 보기의 선반 선 */
   --shelf-line: rgb(0 0 0 / 0.14);
 
+  /* 차트 (dataviz 기본 팔레트, 검증됨). 상태: 읽고 싶은=1, 읽는 중=2, 다 읽음=3 */
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-3: #1baf7a;
+  --viz-track: #cde2fb; /* 목표 막대의 빈 부분 (같은 파랑의 옅은 단계) */
+  --viz-grid: #e1e0d9;
+  /* 히트맵: 파랑 한 가지, 옅음 → 짙음 */
+  --heat-0: rgb(0 0 0 / 0.06);
+  --heat-1: #b7d3f6;
+  --heat-2: #6da7ec;
+  --heat-3: #2a78d6;
+  --heat-4: #184f95;
+
   --scroll-thumb: rgb(0 0 0 / 0.26);
   --scroll-thumb-hover: rgb(0 0 0 / 0.45);
   --glass-blur: 16px;
@@ -48,7 +61,7 @@
   --line: rgb(255 255 255 / 0.1);
   --fill: rgb(120 120 128 / 0.26);
   --surface: rgb(30 30 34 / 0.86);
-  --app-bg: #000;
+  --app-bg: #252527; /* 완전 검정보다 살짝 밝은 회색 */
 
   --glass-tint: rgb(40 40 46 / 0.32);
   --glass-tint-strong: rgb(44 44 50 / 0.62);
@@ -56,6 +69,18 @@
   --glass-shadow: rgb(0 0 0 / 0.5);
 
   --shelf-line: rgb(255 255 255 / 0.16);
+
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-track: #184f95;
+  --viz-grid: #2c2c2a;
+  /* 어두운 화면에선 적을수록 배경에 가깝게, 많을수록 밝게 */
+  --heat-0: rgb(255 255 255 / 0.06);
+  --heat-1: #184f95;
+  --heat-2: #256abf;
+  --heat-3: #3987e5;
+  --heat-4: #86b6ef;
 
   --scroll-thumb: rgb(255 255 255 / 0.28);
   --scroll-thumb-hover: rgb(255 255 255 / 0.5);
