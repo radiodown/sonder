@@ -1,9 +1,11 @@
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react'
 import * as DM from '@radix-ui/react-dropdown-menu'
 import { useRef, useState } from 'react'
+import { useBook } from '../../apps/bookshelf/hooks'
 import { APPS, getApp, rootAppId } from '../../apps/registry'
 import { useNav } from '../../lib/nav'
 import { useWindows } from '../../stores/windows'
+import { BookCover } from '../../ui/BookCover'
 import { Glass } from '../../ui/Glass'
 
 const BASE = 50
@@ -120,11 +122,17 @@ function DockItem({ mouseX, label, running, onClick, menu, children }) {
   )
 }
 
+/** 책 정보 창: 그 책의 표지로 보여 줍니다 */
+function BookTile({ bookId, children }) {
+  return children(useBook(bookId) ?? null)
+}
+
 export function Dock() {
   const nav = useNav()
   const mouseX = useMotionValue(Infinity)
   const { windows, update, focus, close, showApp, hideApp, quitApp } = useWindows()
-  const minimized = windows.filter((w) => w.minimized)
+  // Dock 오른쪽 칸: 최소화된 창 + 열려 있는 책 정보 창 (여러 권을 띄워도 Dock 에서 골라 갈 수 있게)
+  const tiles = windows.filter((w) => w.minimized || w.appId === 'bookDetail')
 
   // 앱별 빠른 동작 (macOS Dock 메뉴처럼)
   const quickActions = {
@@ -170,28 +178,52 @@ export function Dock() {
             <AppIcon app={app} />
           </DockItem>
         ))}
-        {minimized.length > 0 && <span className="mx-1 mb-1 h-11 w-px self-end bg-ink/20" />}
-        {minimized.map((w) => {
+        {tiles.length > 0 && <span className="mx-1 mb-1 h-11 w-px self-end bg-ink/20" />}
+        {tiles.map((w) => {
           const restore = () => {
             update(w.id, { minimized: false })
             focus(w.id)
           }
-          return (
+          const tile = (label, icon) => (
             <DockItem
               key={w.id}
               mouseX={mouseX}
-              label={getApp(w.appId).name}
+              label={label}
+              running={!w.minimized}
               onClick={restore}
               menu={[
-                { label: '복원', onSelect: restore },
+                { label: w.minimized ? '복원' : '보기', onSelect: restore },
+                ...(w.minimized ? [] : [{ label: '최소화', onSelect: () => update(w.id, { minimized: true }) }]),
                 'sep',
                 { label: '닫기', onSelect: () => close(w.id) },
               ]}
             >
-              <span className="flex aspect-square w-full items-center justify-center rounded-[22%] bg-surface p-[12%] shadow">
-                <AppIcon app={getApp(w.appId)} />
-              </span>
+              {icon}
             </DockItem>
+          )
+          if (w.appId === 'bookDetail') {
+            return (
+              <BookTile key={w.id} bookId={w.props.bookId}>
+                {(book) =>
+                  tile(
+                    book?.title ?? '책 정보',
+                    <span className="flex aspect-square w-full items-end justify-center">
+                      {book ? (
+                        <BookCover book={book} rounded="rounded-[2px_5px_5px_2px]" className="h-full w-auto" />
+                      ) : (
+                        <AppIcon app={getApp(w.appId)} />
+                      )}
+                    </span>,
+                  )
+                }
+              </BookTile>
+            )
+          }
+          return tile(
+            getApp(w.appId).name,
+            <span className="flex aspect-square w-full items-center justify-center rounded-[22%] bg-surface p-[12%] shadow">
+              <AppIcon app={getApp(w.appId)} />
+            </span>,
           )
         })}
       </Glass>
