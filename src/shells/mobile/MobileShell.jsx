@@ -1,4 +1,4 @@
-import { CaretLeftIcon, CheckIcon, NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
+import { CaretLeftIcon, NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
 import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { useLocation, useMatch, useNavigate } from 'react-router'
@@ -16,9 +16,8 @@ import { useReviews } from '../../apps/reviews/hooks'
 import { LazyReviewEditor as ReviewEditor } from '../../apps/reviews/LazyReviewEditor'
 import { ReviewRow } from '../../apps/reviews/ReviewList'
 import { Settings } from '../../apps/settings/Settings'
-import { STATUSES, addReview, deleteReview, updateBook } from '../../db/db'
+import { STATUSES, addReview, deleteReview } from '../../db/db'
 import { NavContext, useNav } from '../../lib/nav'
-import { BookCover } from '../../ui/BookCover'
 import { Glass } from '../../ui/Glass'
 import { Segmented } from '../../ui/Segmented'
 import { Screen } from './Screen'
@@ -49,48 +48,6 @@ function ShelfScreen() {
   )
 }
 
-function ReadingScreen() {
-  const nav = useNav()
-  const books = useBooks('reading')
-  return (
-    <Screen title="읽는 중">
-      <div className="flex flex-col gap-4 px-5">
-        {books?.length === 0 && (
-          <p className="py-16 text-center text-sm text-ink-2">
-            지금 읽고 있는 책이 없어요.
-            <br />책 정보에서 '읽는 중'으로 바꿔보세요.
-          </p>
-        )}
-        {books?.map((b) => (
-          <motion.div
-            key={b.id}
-            layout
-            whileTap={{ scale: 0.98 }}
-            onClick={() => nav.openBook(b.id)}
-            className="relative flex gap-4 overflow-hidden rounded-3xl bg-surface p-4 dark:bg-white/[0.07]"
-          >
-            <BookCover book={b} className="w-20 shrink-0" />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <p className="line-clamp-2 font-semibold leading-snug">{b.title}</p>
-              <p className="mt-1 line-clamp-1 text-sm text-ink-2">{b.authors.join(', ')}</p>
-              <div className="flex-1" />
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  updateBook(b.id, { status: 'done' })
-                }}
-                className="flex items-center gap-1 self-start rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-white"
-              >
-                <CheckIcon size={14} weight="bold" /> 다 읽었어요
-              </button>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </Screen>
-  )
-}
-
 function SettingsScreen() {
   return (
     <Screen title="설정">
@@ -99,7 +56,7 @@ function SettingsScreen() {
   )
 }
 
-const SCREENS = { '/': ShelfScreen, '/reading': ReadingScreen, '/reviews': ReviewsScreen, '/settings': SettingsScreen }
+const SCREENS = { '/': ShelfScreen, '/reviews': ReviewsScreen, '/settings': SettingsScreen }
 
 /**
  * push 된 화면. iOS 처럼 화면 왼쪽 가장자리에서 오른쪽으로 밀면 뒤로 갑니다.

@@ -1,10 +1,9 @@
-import { BookOpenIcon, BooksIcon, GearSixIcon, NotePencilIcon } from '@phosphor-icons/react'
+import { BooksIcon, GearSixIcon, NotePencilIcon } from '@phosphor-icons/react'
 import { motion } from 'motion/react'
 import { Glass } from '../../ui/Glass'
 
 const TABS = [
   { path: '/', label: '책장', Icon: BooksIcon },
-  { path: '/reading', label: '읽는 중', Icon: BookOpenIcon },
   { path: '/reviews', label: '독후감', Icon: NotePencilIcon },
   { path: '/settings', label: '설정', Icon: GearSixIcon },
 ]
