@@ -1,6 +1,6 @@
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react'
-import { useRef } from 'react'
-import * as CM from '@radix-ui/react-context-menu'
+import * as DM from '@radix-ui/react-dropdown-menu'
+import { useRef, useState } from 'react'
 import { APPS, getApp, rootAppId } from '../../apps/registry'
 import { useNav } from '../../lib/nav'
 import { useWindows } from '../../stores/windows'
@@ -25,28 +25,36 @@ export function AppIcon({ app, size = '100%' }) {
 const menuCls = 'glass glass-strong z-[10000] min-w-44 rounded-xl p-1.5 text-[13px] text-ink'
 const itemCls =
   'flex cursor-default items-center rounded-md px-2.5 py-1 outline-none data-[disabled]:opacity-40 data-[highlighted]:bg-accent data-[highlighted]:text-white'
+const HOLD_MS = 450
 
-/** 우클릭 메뉴 항목: [{ label, onSelect, disabled }] 또는 'sep' */
+/** Dock 메뉴 항목: [{ label, onSelect, disabled }] 또는 'sep' */
 function DockMenu({ items }) {
   return (
-    <CM.Portal>
-      <CM.Content className={menuCls}>
+    <DM.Portal>
+      <DM.Content side="top" align="center" sideOffset={14} className={menuCls}>
         {items.map((it, i) =>
           it === 'sep' ? (
-            <CM.Separator key={i} className="mx-2 my-1 h-px bg-line" />
+            <DM.Separator key={i} className="mx-2 my-1 h-px bg-line" />
           ) : (
-            <CM.Item key={i} className={itemCls} disabled={it.disabled} onSelect={it.onSelect}>
+            <DM.Item key={i} className={itemCls} disabled={it.disabled} onSelect={it.onSelect}>
               {it.label}
-            </CM.Item>
+            </DM.Item>
           ),
         )}
-      </CM.Content>
-    </CM.Portal>
+      </DM.Content>
+    </DM.Portal>
   )
 }
 
+/**
+ * Dock 아이콘. macOS 처럼 우클릭하거나 꾹 누르고 있으면 메뉴가 아이콘 위에 열립니다.
+ * (마우스 제스처 같은 확장 프로그램이 우클릭을 가로채도 꾹 누르기는 동작합니다)
+ */
 function DockItem({ mouseX, label, running, onClick, menu, children }) {
   const ref = useRef(null)
+  const [open, setOpen] = useState(false)
+  const holdTimer = useRef(null)
+  const openedByHold = useRef(false)
   const distance = useTransform(mouseX, (x) => {
     const r = ref.current?.getBoundingClientRect()
     return r ? x - (r.left + r.width / 2) : Infinity
@@ -57,26 +65,58 @@ function DockItem({ mouseX, label, running, onClick, menu, children }) {
     mass: 0.2,
   })
 
+  const startHold = (e) => {
+    if (!menu || e.button !== 0) return
+    openedByHold.current = false
+    clearTimeout(holdTimer.current)
+    holdTimer.current = setTimeout(() => {
+      openedByHold.current = true
+      setOpen(true)
+    }, HOLD_MS)
+  }
+  const cancelHold = () => clearTimeout(holdTimer.current)
+
   return (
-    <CM.Root modal={false}>
-      <CM.Trigger asChild>
-        <motion.button
-          ref={ref}
-          style={{ width: size, height: size }}
-          whileTap={{ scale: 0.88 }}
-          onClick={onClick}
-          aria-label={label}
-          className="group relative flex shrink-0 items-end justify-center"
+    <DM.Root open={open} onOpenChange={setOpen} modal={false}>
+      <motion.button
+        ref={ref}
+        style={{ width: size, height: size }}
+        whileTap={{ scale: 0.88 }}
+        onPointerDown={startHold}
+        onPointerUp={cancelHold}
+        onPointerLeave={cancelHold}
+        onContextMenu={(e) => {
+          if (!menu) return
+          e.preventDefault()
+          cancelHold()
+          setOpen(true)
+        }}
+        onClick={() => {
+          // 꾹 눌러 메뉴를 연 경우엔 손을 뗄 때 생기는 클릭을 무시
+          if (openedByHold.current) {
+            openedByHold.current = false
+            return
+          }
+          onClick()
+        }}
+        aria-label={label}
+        aria-haspopup={menu ? 'menu' : undefined}
+        className="group relative flex shrink-0 items-end justify-center"
+      >
+        {/* 메뉴 위치 기준점 (아이콘 위쪽 가운데) */}
+        <DM.Trigger asChild>
+          <span aria-hidden="true" tabIndex={-1} className="pointer-events-none absolute left-1/2 top-0 size-0" />
+        </DM.Trigger>
+        <span
+          className={`glass glass-strong pointer-events-none absolute -top-11 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium opacity-0 transition-opacity ${open ? '' : 'group-hover:opacity-100'}`}
         >
-          <span className="glass glass-strong pointer-events-none absolute -top-11 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium opacity-0 transition-opacity group-hover:opacity-100">
-            {label}
-          </span>
-          {children}
-          {running && <span className="absolute -bottom-[7px] size-1 rounded-full bg-ink/70" />}
-        </motion.button>
-      </CM.Trigger>
+          {label}
+        </span>
+        {children}
+        {running && <span className="absolute -bottom-[7px] size-1 rounded-full bg-ink/70" />}
+      </motion.button>
       {menu && <DockMenu items={menu} />}
-    </CM.Root>
+    </DM.Root>
   )
 }
 
