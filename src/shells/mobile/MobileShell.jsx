@@ -101,11 +101,15 @@ const pushVariants = {
   out: (instant) => ({ x: '100%', transition: instant ? { duration: 0 } : PUSH_SPRING }),
 }
 
+// 여기서 시작한 터치는 뒤로가기 스와이프로 쓰지 않습니다 (입력·글 편집·가로 스크롤)
+const NO_SWIPE = 'input, textarea, select, [contenteditable="true"], [data-no-swipe]'
+
 /**
- * push 된 화면. iOS 처럼 화면 왼쪽 가장자리에서 오른쪽으로 밀면 뒤로 갑니다.
- * (가장자리에서만 시작해야 본문 스크롤·글 편집과 부딪히지 않습니다)
+ * push 된 화면. 오른쪽으로 밀면 뒤로 버튼과 똑같이 뒤로 갑니다.
+ * - 기본: iOS 처럼 화면 왼쪽 가장자리에서 시작해야 합니다 (글 편집과 부딪히지 않게)
+ * - swipeAnywhere: 화면 어디서 시작해도 됩니다. 위아래 스크롤은 그대로 두고 가로로 밀 때만 끌려옵니다.
  */
-function PushScreen({ onBack, trailing, z = 'z-20', children }) {
+function PushScreen({ onBack, trailing, z = 'z-20', swipeAnywhere = false, children }) {
   const controls = useDragControls()
   const x = useMotionValue(0)
   return (
@@ -122,6 +126,7 @@ function PushScreen({ onBack, trailing, z = 'z-20', children }) {
       dragControls={controls}
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={{ left: 0, right: 0.9 }}
+      dragDirectionLock
       onDragEnd={(_, info) => {
         if (info.offset.x > 100 || info.velocity.x > 600) {
           // 손을 뗀 자리에서 곧장 밀어냅니다. (제자리로 튕겨 돌아가는 탄성 애니메이션을 끊음)
@@ -144,7 +149,10 @@ function PushScreen({ onBack, trailing, z = 'z-20', children }) {
         </Glass>
         <div className="pointer-events-auto flex gap-2">{trailing}</div>
       </div>
-      <div className="pt-safe h-full overflow-y-auto overscroll-contain pb-12">
+      <div
+        className={`pt-safe h-full overflow-y-auto overscroll-contain pb-12 ${swipeAnywhere ? 'touch-pan-y' : ''}`}
+        onPointerDown={swipeAnywhere ? (e) => !e.target.closest(NO_SWIPE) && controls.start(e) : undefined}
+      >
         <div className="h-12" />
         {children}
       </div>
@@ -278,7 +286,7 @@ export function MobileShell() {
         <TabScreen />
         <AnimatePresence custom={swiped}>
           {bookMatch && (
-            <PushScreen key={`b${bookMatch.params.id}`} onBack={back}>
+            <PushScreen key={`b${bookMatch.params.id}`} onBack={back} swipeAnywhere>
               <BookDetail bookId={bookMatch.params.id} onDeleted={back} />
             </PushScreen>
           )}

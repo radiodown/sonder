@@ -84,6 +84,13 @@ function BookReviews({ bookId }) {
 }
 
 /** 책 상세. 데스크톱 창과 모바일 화면이 함께 씁니다. */
+// 카카오는 소개를 앞부분만 잘라서 줍니다. 문장이 끝나지 않은 채 끊겼으면 … 을 붙입니다.
+const SENTENCE_END = /[.!?。…"'”’」』)\]]\s*$/
+function description(book) {
+  const text = book.description.trimEnd()
+  return book.source === 'kakao' && !SENTENCE_END.test(text) ? `${text}…` : text
+}
+
 export function BookDetail({ bookId, onDeleted }) {
   const book = useBook(bookId)
 
@@ -149,7 +156,7 @@ export function BookDetail({ bookId, onDeleted }) {
         <section>
           <h2 className="mb-2 text-sm font-semibold text-ink-2">소개</h2>
           <p className="whitespace-pre-line text-sm leading-relaxed" data-selectable>
-            {book.description}
+            {description(book)}
           </p>
         </section>
       )}
