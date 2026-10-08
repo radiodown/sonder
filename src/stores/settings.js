@@ -29,6 +29,7 @@ const DEFAULTS = {
   windowBlur: WINDOW_DEFAULTS.blur,
   windowClarity: WINDOW_DEFAULTS.clarity,
   platform: 'auto', // 'auto' | 'desktop' | 'mobile'
+  dockIconStyle: 'tinted', // Dock·Spotlight 앱 아이콘: 'tinted'(색조 유리) | 'clear'(투명 유리) | 'solid'(불투명)
   // 책장 보기
   shelfView: 'grid', // 'grid'(아이콘) | 'list'(목록) | 'spine'(책등)
   shelfSort: 'recent', // 'recent' | 'title' | 'publisher'

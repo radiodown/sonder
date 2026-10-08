@@ -235,6 +235,20 @@ export function Settings() {
             ]}
           />
         </Row>
+        {!mobile && (
+          <Row label="Dock 아이콘">
+            <Segmented
+              size="sm"
+              value={s.dockIconStyle}
+              onChange={(dockIconStyle) => s.set({ dockIconStyle })}
+              options={[
+                { value: 'tinted', label: '색조 유리' },
+                { value: 'clear', label: '투명 유리' },
+                { value: 'solid', label: '불투명' },
+              ]}
+            />
+          </Row>
+        )}
         <EffectSliders
           title="유리 효과"
           hint="메뉴바 · Dock · 탭바 · 메뉴 · 사이드바"

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { useBook } from '../../apps/bookshelf/hooks'
 import { APPS, getApp, rootAppId } from '../../apps/registry'
 import { useNav } from '../../lib/nav'
+import { useSettings } from '../../stores/settings'
 import { useWindows } from '../../stores/windows'
 import { BookCover } from '../../ui/BookCover'
 import { Glass } from '../../ui/Glass'
@@ -12,8 +13,36 @@ const BASE = 50
 const MAG = 78
 const RANGE = 150
 
+const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(' ')
+
+/**
+ * 앱 아이콘. 설정(dockIconStyle)에 따라
+ * - tinted: 앱 색을 반투명하게 깐 색조 유리 + 흰 그림
+ * - clear: 거의 무색인 맑은 유리 + 앱 색 그림
+ * - solid: 예전처럼 불투명한 그라데이션 (책장은 public/icon.svg)
+ * 유리 아이콘은 따로 블러를 주지 않습니다. Dock 이 이미 뒤를 흐리고 있어서, 겹쳐 줘도 Dock 표면만 흐려집니다.
+ */
 export function AppIcon({ app, size = '100%' }) {
   const { Icon } = app
+  const style = useSettings((s) => s.dockIconStyle)
+  if (style !== 'solid' && app.color) {
+    const c = rgb(app.color)
+    const tinted = style !== 'clear'
+    return (
+      <span
+        className="glass-icon flex aspect-square items-center justify-center rounded-[22%]"
+        style={{
+          width: size,
+          color: tinted ? '#fff' : app.color,
+          background: tinted
+            ? `linear-gradient(to bottom, rgb(${c} / 0.62), rgb(${c} / 0.34))`
+            : 'linear-gradient(to bottom, rgb(255 255 255 / 0.34), rgb(255 255 255 / 0.1))',
+        }}
+      >
+        <Icon weight="fill" className="glass-icon-glyph relative h-[58%] w-[58%]" />
+      </span>
+    )
+  }
   // 그림 아이콘이 있는 앱 (책장: 앱 아이콘과 같은 public/icon.svg)
   if (app.image) {
     return (
