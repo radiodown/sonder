@@ -16,7 +16,7 @@ export function TabBar({ current, hidden, onTab }) {
       initial={false}
       animate={{ y: hidden ? 140 : 0, opacity: hidden ? 0 : 1 }}
       transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-      className="pb-safe pointer-events-none fixed inset-x-0 bottom-0 z-30 flex items-end gap-3 px-5"
+      className="tabbar-bottom pointer-events-none fixed inset-x-0 bottom-0 z-30 flex items-end gap-3 px-5"
     >
       <Glass refract className="pointer-events-auto mb-2 flex h-[62px] flex-1 items-center rounded-full p-1">
         {TABS.map(({ path, label, Icon }) => {

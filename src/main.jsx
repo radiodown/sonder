@@ -6,8 +6,10 @@ import { HashRouter } from 'react-router'
 import App from './App'
 import './index.css'
 import { installScrollbarFade } from './lib/scrollbars'
+import { markStandalone } from './lib/standalone'
 
 installScrollbarFade()
+markStandalone()
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },

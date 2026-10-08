@@ -301,3 +301,13 @@ html[data-refract="on"] .glass-refract {
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* 하단 탭바 위치.
+   Safari 안에서는 홈 인디케이터 영역 위에 띄우고,
+   홈 화면 앱(주소창 없음)에서는 iOS 26 기본 앱처럼 홈 인디케이터 바로 위까지 내립니다. */
+.tabbar-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+[data-standalone] .tabbar-bottom {
+  padding-bottom: max(calc(env(safe-area-inset-bottom) - 20px), 0px);
+}
