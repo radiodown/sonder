@@ -53,12 +53,14 @@ function ShelfScreen() {
   return (
     <Screen
       title="책장"
+      header={
+        <div className="scrollbar-none -my-1 overflow-x-auto py-1">
+          <Segmented options={FILTERS} value={filter} onChange={setFilter} size="sm" />
+        </div>
+      }
       trailing={<MobileShelfMenu />}
       search={{ value: search, onChange: setSearch, placeholder: '제목, 저자, 출판사' }}
     >
-      <div className="scrollbar-none overflow-x-auto px-5 pb-5">
-        <Segmented options={FILTERS} value={filter} onChange={setFilter} size="sm" />
-      </div>
       <div className="px-5">
         {q && <OnlineSearchRow query={q} onSearch={() => nav.openAdd(q)} />}
         {books?.length === 0 && filter === 'all' && !q ? (
@@ -146,7 +148,7 @@ function ReviewsScreen() {
           refract
           onClick={() => nav.newReview()}
           aria-label="새 독후감"
-          className="mb-1 flex size-11 items-center justify-center rounded-full"
+          className="flex size-11 shrink-0 items-center justify-center rounded-full"
         >
           <NotePencilIcon size={22} />
         </Glass>

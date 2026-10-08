@@ -78,11 +78,12 @@ function SearchBar({ height, open, value, onChange, placeholder, onCancel }) {
 }
 
 /**
- * iOS 화면 틀: 큰 제목 → 스크롤하면 상단에 유리 바와 작은 제목이 나타납니다.
- * search 를 주면 제목 아래에 끌어내려 여는 검색창이 생깁니다: { value, onChange, placeholder }
+ * iOS 화면 틀. 제목은 화면에 쓰지 않고(탭바로 충분), 스크롤하면 상태 막대 뒤에 유리 바가 나타납니다.
+ * header 는 맨 윗줄 왼쪽, trailing 은 같은 줄 오른쪽에 놓입니다.
+ * search 를 주면 그 아래에 끌어내려 여는 검색창이 생깁니다: { value, onChange, placeholder }
  * 하단은 탭바가 덮으므로 여백을 둡니다.
  */
-export function Screen({ title, trailing, search, children }) {
+export function Screen({ title, header, trailing, search, children }) {
   const ref = useRef(null)
   const { scrollY } = useScroll({ container: ref })
   const barOpacity = useTransform(scrollY, [24, 56], [0, 1])
@@ -93,12 +94,15 @@ export function Screen({ title, trailing, search, children }) {
       <motion.div
         style={{ opacity: barOpacity }}
         className="glass glass-flat pt-safe pointer-events-none absolute inset-x-0 top-0 z-10 rounded-none"
+      />
+      <div
+        ref={ref}
+        {...reveal.handlers}
+        aria-label={title}
+        className="pt-safe h-full overflow-y-auto overscroll-contain pb-36"
       >
-        <div className="flex h-11 items-center justify-center text-[17px] font-semibold">{title}</div>
-      </motion.div>
-      <div ref={ref} {...reveal.handlers} className="pt-safe h-full overflow-y-auto overscroll-contain pb-36">
-        <div className="flex items-end justify-between gap-3 px-5 pb-3 pt-4">
-          <h1 className="text-[34px] font-bold leading-tight tracking-tight">{title}</h1>
+        <div className="flex min-h-4 items-center gap-3 pb-3 pl-5 pr-4 pt-2">
+          <div className="min-w-0 flex-1">{header}</div>
           {trailing}
         </div>
         {search && (

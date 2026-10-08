@@ -26,7 +26,7 @@ export function TabBar({ current, hidden, onTab }) {
               key={path}
               onClick={() => onTab(path)}
               aria-current={active ? 'page' : undefined}
-              className={`relative flex h-full flex-1 flex-col items-center justify-center gap-px rounded-full transition-colors ${active ? 'text-accent' : 'text-ink'}`}
+              className={`relative flex h-full flex-1 flex-col items-center justify-center gap-px rounded-full text-ink`}
             >
               {active && (
                 <motion.span

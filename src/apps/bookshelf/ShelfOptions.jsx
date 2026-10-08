@@ -80,7 +80,7 @@ export function MobileShelfMenu() {
           as="button"
           refract
           aria-label="보기 옵션"
-          className="mb-1 flex size-11 items-center justify-center rounded-full outline-none"
+          className="flex size-11 shrink-0 items-center justify-center rounded-full outline-none"
         >
           <DotsThreeIcon size={24} weight="bold" />
         </Glass>
