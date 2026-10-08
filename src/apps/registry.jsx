@@ -11,6 +11,7 @@ import { StatsWindow } from './stats/StatsView'
  *
  * - Window: 데스크톱 창 내용. ({ win, close }) 를 받습니다.
  * - titlebar: 'none' 이면 앱이 직접 툴바를 그립니다 (className="window-drag" 로 드래그 영역 지정).
+ * - image: public/ 안의 그림 파일을 아이콘으로 씁니다 (없으면 Icon + tint 로 그림)
  * - dock: Dock 에 고정할지
  * - windowKey: 같은 key 의 창은 하나만 열립니다
  * - parent: 이 창이 속한 앱 (책 정보·책 추가 창은 '책장' 앱의 창. 책장을 종료하면 함께 닫힙니다)
@@ -21,6 +22,7 @@ export const APPS = [
     name: '책장',
     Icon: BooksIcon,
     tint: 'from-orange-300 to-orange-600',
+    image: 'icon.svg',
     size: { width: 980, height: 640 },
     titlebar: 'none',
     dock: true,
@@ -66,6 +68,7 @@ export const APPS = [
     parent: 'bookshelf',
     Icon: BooksIcon,
     tint: 'from-orange-300 to-orange-600',
+    image: 'icon.svg',
     size: { width: 520, height: 680 },
     dock: false,
     windowKey: (p) => `book-${p.bookId}`,

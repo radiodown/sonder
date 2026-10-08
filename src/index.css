@@ -342,3 +342,28 @@ html[data-standalone] {
 [data-standalone] .tabbar-bottom {
   padding-bottom: max(calc(env(safe-area-inset-bottom) - 20px), 0px);
 }
+
+/* "Library에 관하여" 크레딧: 목록 두 벌을 이어 붙여 절반만큼 올리면 끊김 없이 반복됩니다 */
+@keyframes credits-roll {
+  to {
+    transform: translateY(-50%);
+  }
+}
+.credits-roll {
+  animation: credits-roll 40s linear infinite;
+}
+.credits:hover .credits-roll {
+  animation-play-state: paused;
+}
+/* 움직임 줄이기: 굴리지 않고 손으로 스크롤 */
+@media (prefers-reduced-motion: reduce) {
+  .credits {
+    overflow-y: auto;
+  }
+  .credits-roll {
+    animation: none;
+  }
+  .credits-roll > [aria-hidden] {
+    display: none;
+  }
+}

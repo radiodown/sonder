@@ -14,6 +14,18 @@ const RANGE = 150
 
 export function AppIcon({ app, size = '100%' }) {
   const { Icon } = app
+  // 그림 아이콘이 있는 앱 (책장: 앱 아이콘과 같은 public/icon.svg)
+  if (app.image) {
+    return (
+      <img
+        src={`${import.meta.env.BASE_URL}${app.image}`}
+        alt=""
+        draggable={false}
+        className="aspect-square drop-shadow-[0_2px_3px_rgb(0_0_0/0.25)]"
+        style={{ width: size }}
+      />
+    )
+  }
   return (
     <span
       className={`flex aspect-square items-center justify-center rounded-[22%] bg-gradient-to-b ${app.tint} text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.45),0_2px_6px_rgb(0_0_0/0.25)]`}

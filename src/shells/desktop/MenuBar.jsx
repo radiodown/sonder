@@ -9,7 +9,6 @@ import {
   MagnifyingGlassIcon,
 } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
 import { getApp, rootAppId } from '../../apps/registry'
 import { driveLoad, driveSave, driveStatusText } from '../../apps/settings/driveActions'
 import { useNav } from '../../lib/nav'
@@ -17,6 +16,7 @@ import { useDrive } from '../../stores/drive'
 import { useSettings } from '../../stores/settings'
 import { selectActive, useWindows } from '../../stores/windows'
 import { Glass } from '../../ui/Glass'
+import { AboutDialog } from './AboutDialog'
 
 function Menu({ label, bold, title, align = 'start', children }) {
   return (
@@ -107,81 +107,86 @@ export function MenuBar({ onSpotlight }) {
   const setSettings = useSettings((s) => s.set)
   const appName = active ? getApp(rootAppId(active.appId)).name : 'Library'
   const driveConfigured = useDrive((s) => s.configured)
+  const [aboutOpen, setAboutOpen] = useState(false)
 
   return (
-    <Glass as="header" className="glass-flat relative z-[9500] flex h-7 items-center rounded-none px-2 text-ink">
-      <Menu label={<BooksIcon size={16} weight="fill" className="-mt-px" />}>
-        <Item onSelect={() => toast('Library 2 — 나만의 책장', { description: 'macOS × iOS Liquid Glass' })}>
-          Library에 관하여
-        </Item>
-        <Sep />
-        <Item onSelect={() => nav.openApp('settings')}>설정…</Item>
-      </Menu>
-      <Menu label={appName} bold>
-        <Item onSelect={() => nav.openApp('settings')}>설정…</Item>
-        <Sep />
-        <Item disabled={!active} onSelect={() => active && hideApp(rootAppId(active.appId))}>
-          {appName} 가리기
-        </Item>
-        <Sep />
-        <Item disabled={!active} onSelect={() => active && quitApp(rootAppId(active.appId))}>
-          {appName} 종료
-        </Item>
-      </Menu>
-      <Menu label="파일">
-        <Item onSelect={nav.openAdd}>새 책 추가…</Item>
-        <Item onSelect={() => nav.newReview()}>새 독후감…</Item>
-        <Item onSelect={() => nav.openApp('bookshelf')}>책장 열기</Item>
-        {driveConfigured && (
-          <>
-            <Sep />
-            <Item onSelect={driveSave}>Google Drive 에 저장</Item>
-            <Item onSelect={driveLoad}>Google Drive 에서 불러오기</Item>
-          </>
-        )}
-        <Sep />
-        <Item disabled={!active} onSelect={() => active && close(active.id)}>
-          창 닫기
-        </Item>
-      </Menu>
-      <Menu label="보기">
-        <Item onSelect={() => setSettings({ theme: 'light' })}>라이트 모드</Item>
-        <Item onSelect={() => setSettings({ theme: 'dark' })}>다크 모드</Item>
-        <Item onSelect={() => setSettings({ theme: 'system' })}>시스템 설정 따르기</Item>
-      </Menu>
-      <Menu label="윈도우">
-        <Item disabled={!active} onSelect={() => active && minimize(active.id)}>
-          최소화
-        </Item>
-        <Item disabled={!active} onSelect={() => active && toggleMaximize(active.id)}>
-          확대/축소
-        </Item>
-        {windows.length > 0 && <Sep />}
-        {windows.map((w) => (
-          <Item
-            key={w.id}
-            onSelect={() => {
-              update(w.id, { minimized: false })
-              focus(w.id)
-            }}
-          >
-            {w.id === active?.id ? '✓ ' : ''}
-            {getApp(w.appId).name}
+    <>
+      <Glass as="header" className="glass-flat relative z-[9500] flex h-7 items-center rounded-none px-2 text-ink">
+        <Menu label={<BooksIcon size={16} weight="fill" className="-mt-px" />}>
+          <Item onSelect={() => setAboutOpen(true)}>
+            Library에 관하여
           </Item>
-        ))}
-      </Menu>
+          <Sep />
+          <Item onSelect={() => nav.openApp('settings')}>설정…</Item>
+        </Menu>
+        <Menu label={appName} bold>
+          <Item onSelect={() => nav.openApp('settings')}>설정…</Item>
+          <Sep />
+          <Item disabled={!active} onSelect={() => active && hideApp(rootAppId(active.appId))}>
+            {appName} 가리기
+          </Item>
+          <Sep />
+          <Item disabled={!active} onSelect={() => active && quitApp(rootAppId(active.appId))}>
+            {appName} 종료
+          </Item>
+        </Menu>
+        <Menu label="파일">
+          <Item onSelect={nav.openAdd}>새 책 추가…</Item>
+          <Item onSelect={() => nav.newReview()}>새 독후감…</Item>
+          <Item onSelect={() => nav.openApp('bookshelf')}>책장 열기</Item>
+          {driveConfigured && (
+            <>
+              <Sep />
+              <Item onSelect={driveSave}>Google Drive 에 저장</Item>
+              <Item onSelect={driveLoad}>Google Drive 에서 불러오기</Item>
+            </>
+          )}
+          <Sep />
+          <Item disabled={!active} onSelect={() => active && close(active.id)}>
+            창 닫기
+          </Item>
+        </Menu>
+        <Menu label="보기">
+          <Item onSelect={() => setSettings({ theme: 'light' })}>라이트 모드</Item>
+          <Item onSelect={() => setSettings({ theme: 'dark' })}>다크 모드</Item>
+          <Item onSelect={() => setSettings({ theme: 'system' })}>시스템 설정 따르기</Item>
+        </Menu>
+        <Menu label="윈도우">
+          <Item disabled={!active} onSelect={() => active && minimize(active.id)}>
+            최소화
+          </Item>
+          <Item disabled={!active} onSelect={() => active && toggleMaximize(active.id)}>
+            확대/축소
+          </Item>
+          {windows.length > 0 && <Sep />}
+          {windows.map((w) => (
+            <Item
+              key={w.id}
+              onSelect={() => {
+                update(w.id, { minimized: false })
+                focus(w.id)
+              }}
+            >
+              {w.id === active?.id ? '✓ ' : ''}
+              {getApp(w.appId).name}
+            </Item>
+          ))}
+        </Menu>
 
-      <div className="flex-1" />
-      <DriveMenu />
-      <button
-        onClick={onSpotlight}
-        aria-label="Spotlight (⌘K)"
-        title="Spotlight (⌘K)"
-        className="rounded-md px-2 py-0.5 hover:bg-white/25 dark:hover:bg-white/10"
-      >
-        <MagnifyingGlassIcon size={15} weight="bold" />
-      </button>
-      <Clock />
-    </Glass>
+        <div className="flex-1" />
+        <DriveMenu />
+        <button
+          onClick={onSpotlight}
+          aria-label="Spotlight (⌘K)"
+          title="Spotlight (⌘K)"
+          className="rounded-md px-2 py-0.5 hover:bg-white/25 dark:hover:bg-white/10"
+        >
+          <MagnifyingGlassIcon size={15} weight="bold" />
+        </button>
+        <Clock />
+      </Glass>
+      {/* 헤더의 backdrop-filter 안에 두면 fixed 가 헤더 기준이 되어 밖에 둡니다 */}
+      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
+    </>
   )
 }
