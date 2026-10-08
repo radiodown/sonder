@@ -59,7 +59,7 @@ export function Window({ win, active }) {
         transition={{ type: 'spring', stiffness: 420, damping: 34 }}
         style={{ transformOrigin: '50% 100%' }}
         onDoubleClick={(e) => e.target.closest('.window-drag') === e.target && toggleMaximize(win.id)}
-        className={`surface relative flex h-full flex-col overflow-hidden rounded-[22px] ring-1 ring-black/10 dark:ring-white/15 ${active ? 'shadow-[0_24px_70px_-12px_rgb(0_0_0/0.45)]' : 'shadow-[0_12px_40px_-12px_rgb(0_0_0/0.3)]'}`}
+        className={`surface relative isolate flex h-full flex-col overflow-hidden rounded-[22px] ring-1 ring-black/10 dark:ring-white/15 ${active ? 'shadow-[0_24px_70px_-12px_rgb(0_0_0/0.45)]' : 'shadow-[0_12px_40px_-12px_rgb(0_0_0/0.3)]'}`}
       >
         <TrafficLights
           active={active}

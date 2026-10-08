@@ -1,5 +1,5 @@
 import { ArrowUpRightIcon, CaretLeftIcon, GlobeIcon, NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
-import { AnimatePresence, motion, useDragControls } from 'motion/react'
+import { AnimatePresence, animate, motion, useDragControls, useMotionValue } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { useLocation, useMatch, useNavigate } from 'react-router'
 import { Toaster } from 'sonner'
@@ -19,6 +19,7 @@ import { Settings } from '../../apps/settings/Settings'
 import { StatsView } from '../../apps/stats/StatsView'
 import { STATUSES, addReview, deleteReview } from '../../db/db'
 import { NavContext, useNav } from '../../lib/nav'
+import { markAppBack, wasSwipeBack } from '../../lib/swipeBack'
 import { Glass } from '../../ui/Glass'
 import { Segmented } from '../../ui/Segmented'
 import { Screen } from './Screen'
@@ -93,24 +94,41 @@ function StatsScreen() {
 
 const SCREENS = { '/': ShelfScreen, '/reviews': ReviewsScreen, '/stats': StatsScreen, '/settings': SettingsScreen }
 
+const PUSH_SPRING = { type: 'spring', stiffness: 380, damping: 40 }
+const pushVariants = {
+  in: { x: 0 },
+  // 브라우저 스와이프로 이미 밀려난 화면은 다시 밀지 않고 바로 없앱니다 (애니메이션이 두 번 보이지 않게)
+  out: (instant) => ({ x: '100%', transition: instant ? { duration: 0 } : PUSH_SPRING }),
+}
+
 /**
  * push 된 화면. iOS 처럼 화면 왼쪽 가장자리에서 오른쪽으로 밀면 뒤로 갑니다.
  * (가장자리에서만 시작해야 본문 스크롤·글 편집과 부딪히지 않습니다)
  */
 function PushScreen({ onBack, trailing, z = 'z-20', children }) {
   const controls = useDragControls()
+  const x = useMotionValue(0)
   return (
     <motion.div
-      initial={{ x: '100%' }}
-      animate={{ x: 0 }}
-      exit={{ x: '100%' }}
-      transition={{ type: 'spring', stiffness: 380, damping: 40 }}
+      style={{ x }}
+      variants={pushVariants}
+      custom={false}
+      initial="out"
+      animate="in"
+      exit="out"
+      transition={PUSH_SPRING}
       drag="x"
       dragListener={false}
       dragControls={controls}
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={{ left: 0, right: 0.9 }}
-      onDragEnd={(_, info) => (info.offset.x > 100 || info.velocity.x > 600) && onBack()}
+      onDragEnd={(_, info) => {
+        if (info.offset.x > 100 || info.velocity.x > 600) {
+          // 손을 뗀 자리에서 곧장 밀어냅니다. (제자리로 튕겨 돌아가는 탄성 애니메이션을 끊음)
+          animate(x, window.innerWidth, { ...PUSH_SPRING, velocity: info.velocity.x })
+          onBack()
+        }
+      }}
       className={`absolute inset-0 ${z} bg-[var(--app-bg)] shadow-[-10px_0_30px_rgb(0_0_0/0.15)]`}
     >
       <div className="absolute inset-y-0 left-0 z-20 w-5 touch-none" onPointerDown={(e) => controls.start(e)} />
@@ -219,7 +237,14 @@ export function MobileShell() {
   const tab = isTab ? location.pathname : lastTab
   const TabScreen = SCREENS[tab]
 
-  const back = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate(tab, { replace: true }))
+  // 브라우저 스와이프 뒤로가기였다면 닫힘 애니메이션을 건너뜁니다
+  const swiped = wasSwipeBack()
+
+  const back = () => {
+    markAppBack()
+    if (window.history.state?.idx > 0) navigate(-1)
+    else navigate(tab, { replace: true })
+  }
 
   const nav = useMemo(() => {
     // 책 상세에서 연 독후감은 책 상세 위에 쌓습니다 (뒤로 가면 책 상세로)
@@ -251,14 +276,14 @@ export function MobileShell() {
     <NavContext.Provider value={nav}>
       <div data-vaul-drawer-wrapper className="fixed inset-0 overflow-hidden bg-[var(--app-bg)]">
         <TabScreen />
-        <AnimatePresence>
+        <AnimatePresence custom={swiped}>
           {bookMatch && (
             <PushScreen key={`b${bookMatch.params.id}`} onBack={back}>
               <BookDetail bookId={bookMatch.params.id} onDeleted={back} />
             </PushScreen>
           )}
         </AnimatePresence>
-        <AnimatePresence>
+        <AnimatePresence custom={swiped}>
           {reviewMatch && (
             <PushScreen
               key={`r${reviewMatch.params.rid}`}

@@ -100,12 +100,15 @@ export function BookDetail({ bookId, onDeleted }) {
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6 px-5 pb-10">
-      <div className="relative -mx-5 flex justify-center overflow-hidden px-5 pb-2 pt-6">
-        {/* 표지 색이 번지는 배경 */}
-        {book.cover && (
-          <img src={book.cover} alt="" className="absolute inset-0 h-full w-full scale-150 object-cover opacity-40 blur-3xl" />
-        )}
-        <BookCover book={book} className="relative w-40" />
+      {/* 표지 색이 화면 전체에 번지는 배경. 스크롤해도 제자리에 있고, 아래로 갈수록 옅어집니다.
+          (화면·창이 transform 을 가지고 있어서 fixed 는 그 화면·창 기준으로 붙습니다) */}
+      {book.cover && (
+        <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden [mask-image:linear-gradient(to_bottom,#000_30%,rgb(0_0_0/0.45))]">
+          <img src={book.cover} alt="" className="h-full w-full scale-150 object-cover opacity-40 blur-3xl" />
+        </div>
+      )}
+      <div className="flex justify-center pb-2 pt-6">
+        <BookCover book={book} className="w-40" />
       </div>
 
       <div className="text-center">
