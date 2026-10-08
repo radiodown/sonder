@@ -12,7 +12,7 @@ const LAT = (37.5 * Math.PI) / 180
 const SOLAR_NOON = 12.5 * 60 // 분
 
 /** 오늘의 해 뜨는·지는 시각 (자정부터 분) */
-function sunTimes(date) {
+export function sunTimes(date) {
   const start = new Date(date.getFullYear(), 0, 0)
   const day = Math.floor((date - start) / 86_400_000)
   const decl = ((23.44 * Math.PI) / 180) * Math.sin(((2 * Math.PI) / 365) * (day - 81))

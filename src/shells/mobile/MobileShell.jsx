@@ -7,6 +7,7 @@ import { Drawer } from 'vaul'
 import { AddBook } from '../../apps/bookshelf/AddBook'
 import { BookDetail } from '../../apps/bookshelf/BookDetail'
 import { EmptyShelf } from '../../apps/bookshelf/BookGrid'
+import { NextBookPicker } from '../../apps/bookshelf/NextBookPicker'
 import { MobileShelfMenu } from '../../apps/bookshelf/ShelfOptions'
 import { useShelfPrefs } from '../../apps/bookshelf/shelfPrefs'
 import { ShelfView } from '../../apps/bookshelf/ShelfView'
@@ -18,6 +19,7 @@ import { ReviewShareMenu } from '../../apps/reviews/ReviewShareMenu'
 import { ReviewRow } from '../../apps/reviews/ReviewList'
 import { Settings } from '../../apps/settings/Settings'
 import { StatsView } from '../../apps/stats/StatsView'
+import { STATS_TABS } from '../../apps/stats/stats'
 import { STATUSES, addReview, deleteReview } from '../../db/db'
 import { NavContext, useNav } from '../../lib/nav'
 import { markAppBack, wasSwipeBack } from '../../lib/swipeBack'
@@ -87,9 +89,17 @@ function SettingsScreen() {
 }
 
 function StatsScreen() {
+  const [tab, setTab] = useState('summary')
   return (
-    <Screen title="통계">
-      <StatsView platform="mobile" />
+    <Screen
+      title="통계"
+      header={
+        <div className="scrollbar-none -my-1 overflow-x-auto py-1">
+          <Segmented options={STATS_TABS} value={tab} onChange={setTab} size="sm" />
+        </div>
+      }
+    >
+      <StatsView platform="mobile" tab={tab} />
     </Screen>
   )
 }
@@ -358,6 +368,7 @@ export function MobileShell() {
         />
       </Sheet>
 
+      <NextBookPicker mobile />
       <Toaster position="top-center" theme="system" />
     </NavContext.Provider>
   )

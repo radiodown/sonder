@@ -1,9 +1,11 @@
+import { DiceFiveIcon } from '@phosphor-icons/react'
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react'
 import * as DM from '@radix-ui/react-dropdown-menu'
 import { useRef, useState } from 'react'
 import { useBook } from '../../apps/bookshelf/hooks'
 import { APPS, getApp, rootAppId } from '../../apps/registry'
 import { useNav } from '../../lib/nav'
+import { openPicker } from '../../stores/picker'
 import { useSettings } from '../../stores/settings'
 import { useWindows } from '../../stores/windows'
 import { BookCover } from '../../ui/BookCover'
@@ -12,6 +14,15 @@ import { Glass } from '../../ui/Glass'
 const BASE = 50
 const MAG = 78
 const RANGE = 150
+
+// Dock 에 고정된 동작 아이콘 (창을 열지 않는 앱처럼 보이는 버튼)
+const PICKER = {
+  id: 'picker',
+  name: '다음 책 뽑기',
+  Icon: DiceFiveIcon,
+  color: '#9b5cf6',
+  tint: 'from-violet-300 to-purple-600',
+}
 
 const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(' ')
 
@@ -285,6 +296,9 @@ export function Dock() {
             <AppIcon app={app} />
           </DockItem>
         ))}
+        <DockItem mouseX={mouseX} label={PICKER.name} onClick={openPicker}>
+          <AppIcon app={PICKER} />
+        </DockItem>
         {(bookWins.length > 0 || tiles.length > 0) && <span className="mx-1 mb-1 h-11 w-px self-end bg-ink/20" />}
         {bookWins.length > 0 && (
           <BookStack

@@ -3,6 +3,7 @@
  * 모바일은 공유 시트로, 데스크톱(또는 공유를 못 하는 브라우저)은 파일로 내려받습니다.
  */
 
+import { saveFile } from '../../lib/saveFile'
 import { byline } from '../../ui/byline'
 
 export const FORMATS = [
@@ -169,15 +170,6 @@ function fileName(review, book, ext) {
   return `${base || '독후감'}.${ext}`
 }
 
-function download(file) {
-  const url = URL.createObjectURL(file)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = file.name
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
 /**
  * 독후감을 파일로 만들어 공유하거나 내려받습니다.
  * share 가 true 이고 브라우저가 파일 공유를 지원하면 공유 시트를 엽니다.
@@ -186,13 +178,5 @@ function download(file) {
 export async function exportReview(review, book, formatId, { share = false } = {}) {
   const f = FORMATS.find((x) => x.id === formatId)
   const file = new File([BUILD[f.id](review, book)], fileName(review, book, f.ext), { type: `${f.type};charset=utf-8` })
-  if (share && navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: review.title || '독후감' })
-    } catch (err) {
-      if (err?.name !== 'AbortError') download(file)
-    }
-    return
-  }
-  download(file)
+  await saveFile(file, { share, title: review.title || '독후감' })
 }

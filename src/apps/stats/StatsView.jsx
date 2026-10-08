@@ -4,8 +4,11 @@ import { useNav } from '../../lib/nav'
 import { useSettings } from '../../stores/settings'
 import { BookCover } from '../../ui/BookCover'
 import { Segmented } from '../../ui/Segmented'
+import { BadgesCard } from './BadgesCard'
+import { BookStackCard } from './BookStackCard'
 import { Card, ColumnChart, RankBars, StackedBar, StatTile } from './charts'
 import { Heatmap } from './Heatmap'
+import { STATS_TABS } from './stats'
 import { useStats } from './useStats'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => `${i + 1}월`)
@@ -129,17 +132,25 @@ function MonthlyTable({ s }) {
   )
 }
 
-/** 통계 화면. 데스크톱 창과 모바일 탭이 함께 씁니다. 위쪽 연도 선택이 아래 모든 '올해' 통계를 바꿉니다. */
-export function StatsView({ platform }) {
+/**
+ * 통계 화면. 데스크톱 창과 모바일 탭이 함께 씁니다.
+ * - 요약: 독서 캘린더 · 목표 · 숫자
+ * - 분석: 월별 · 요일별 · 작가/출판사
+ * - 책장: 책장 전체 기준 (상태 · 별점 · 쌓아 보면 · 오래 기다린 책)
+ * - 배지
+ * 연도 선택은 '요약'과 '분석'에만 보이고, 탭을 오가도 유지됩니다.
+ */
+export function StatsView({ platform, tab = 'summary' }) {
   const nav = useNav()
   const [year, setYear] = useState(() => new Date().getFullYear())
   const s = useStats(year)
   if (!s) return null
   const mobile = platform === 'mobile'
+  const yearly = tab === 'summary' || tab === 'insights'
 
   return (
     <div className={`flex flex-col gap-4 ${mobile ? 'px-4' : 'px-6 pb-8'}`}>
-      {s.years.length > 1 && (
+      {yearly && s.years.length > 1 && (
         <div className="scrollbar-none overflow-x-auto">
           <Segmented
             size="sm"
@@ -150,111 +161,131 @@ export function StatsView({ platform }) {
         </div>
       )}
 
-      <div className={`grid gap-3 ${mobile ? 'grid-cols-2' : 'grid-cols-3'}`}>
-        <StatTile
-          label={s.isCurrentYear ? '올해 읽은 책' : `${year}년에 읽은 책`}
-          value={s.finishedCount}
-          unit="권"
-          sub={s.isCurrentYear ? `이번 달 ${s.finishedThisMonth}권` : `한 달 평균 ${(s.finishedCount / 12).toFixed(1)}권`}
-        />
-        <StatTile
-          label="연속 독서"
-          value={s.isCurrentYear ? s.currentStreak : s.longestStreak}
-          unit="일"
-          sub={s.isCurrentYear ? `최장 ${s.longestStreak}일` : '그해 최장 기록'}
-        />
-        <StatTile label="활동한 날" value={s.activeDayCount} unit="일" sub={`활동 ${s.activityTotal}회`} />
-        <StatTile
-          label="읽은 쪽수"
-          value={s.pages ? s.pages.toLocaleString() : null}
-          unit="쪽"
-          sub={s.pagesBookCount ? `쪽수가 있는 ${s.pagesBookCount}권 기준` : '쪽수 정보가 있는 책이 없어요'}
-        />
-        <StatTile
-          label="한 권 읽는 데"
-          value={s.medianDays}
-          unit="일"
-          sub={s.durationCount ? `중간값 · ${s.durationCount}권 기준` : '시작일·완독일이 있는 책이 없어요'}
-        />
-        <StatTile label="쓴 독후감" value={s.reviewsWritten} unit="편" />
-      </div>
+      {tab === 'summary' && (
+        <>
+          <Card title="독서 캘린더" sub="읽기 시작 · 완독 · 독후감 · 메모를 쓴 날">
+            <Heatmap year={year} byDay={s.byDay} cell={mobile ? 11 : 13} gap={mobile ? 2.5 : 3} />
+          </Card>
 
-      <Card title="독서 캘린더" sub="읽기 시작 · 완독 · 독후감 · 메모를 쓴 날">
-        <Heatmap year={year} byDay={s.byDay} cell={mobile ? 11 : 13} gap={mobile ? 2.5 : 3} />
-      </Card>
+          <GoalCard s={s} />
 
-      <div className={`grid gap-4 ${mobile ? '' : 'grid-cols-2'}`}>
-        <GoalCard s={s} />
-        <Card title="월별 완독">
-          <ColumnChart
-            data={s.monthly.map((v, i) => ({ label: `${i + 1}`, value: v, tip: `${year}년 ${MONTHS[i]}` }))}
-            unit="권"
-            labelEvery={mobile ? 2 : 1}
-          />
-          <MonthlyTable s={s} />
-        </Card>
-      </div>
+          <div className={`grid gap-3 ${mobile ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            <StatTile
+              label={s.isCurrentYear ? '올해 읽은 책' : `${year}년에 읽은 책`}
+              value={s.finishedCount}
+              unit="권"
+              sub={s.isCurrentYear ? `이번 달 ${s.finishedThisMonth}권` : `한 달 평균 ${(s.finishedCount / 12).toFixed(1)}권`}
+            />
+            <StatTile
+              label="연속 독서"
+              value={s.isCurrentYear ? s.currentStreak : s.longestStreak}
+              unit="일"
+              sub={s.isCurrentYear ? `최장 ${s.longestStreak}일` : '그해 최장 기록'}
+            />
+            <StatTile label="활동한 날" value={s.activeDayCount} unit="일" sub={`활동 ${s.activityTotal}회`} />
+            <StatTile
+              label="읽은 쪽수"
+              value={s.pages ? s.pages.toLocaleString() : null}
+              unit="쪽"
+              sub={s.pagesBookCount ? `쪽수가 있는 ${s.pagesBookCount}권 기준` : '쪽수 정보가 있는 책이 없어요'}
+            />
+            <StatTile
+              label="한 권 읽는 데"
+              value={s.medianDays}
+              unit="일"
+              sub={s.durationCount ? `중간값 · ${s.durationCount}권 기준` : '시작일·완독일이 있는 책이 없어요'}
+            />
+            <StatTile label="쓴 독후감" value={s.reviewsWritten} unit="편" />
+          </div>
 
-      <div className={`grid gap-4 ${mobile ? '' : 'grid-cols-3'}`}>
-        <Card title="요일별 활동" sub="어느 요일에 많이 읽었나">
-          <ColumnChart data={s.weekday.map((v, i) => ({ label: WEEKDAYS[i], value: v, tip: `${WEEKDAYS[i]}요일` }))} unit="회" height={110} />
-        </Card>
-        <Card title="많이 읽은 작가">
-          <RankBars items={s.topAuthors} empty="이 해에 다 읽은 책이 없어요" />
-        </Card>
-        <Card title="많이 읽은 출판사">
-          <RankBars items={s.topPublishers} empty="이 해에 다 읽은 책이 없어요" />
-        </Card>
-      </div>
+        </>
+      )}
 
-      <h2 className="mt-2 text-sm font-semibold text-ink-2">책장 전체</h2>
-      <div className={`grid gap-4 ${mobile ? '' : 'grid-cols-3'}`}>
-        <Card title="상태">
-          <StackedBar
-            parts={[
-              { label: '읽고 싶은', value: s.status.want, color: 'var(--viz-1)' },
-              { label: '읽는 중', value: s.status.reading, color: 'var(--viz-2)' },
-              { label: '다 읽음', value: s.status.done, color: 'var(--viz-3)' },
-            ]}
-          />
-        </Card>
-        <Card title="별점 분포">
-          <ColumnChart data={s.ratings.map((v, i) => ({ label: `★${i + 1}`, value: v, tip: `별 ${i + 1}개` }))} unit="권" height={110} />
-        </Card>
-        <Card title="오래 기다린 책" sub="읽고 싶은 책 중 가장 먼저 담은 책">
-          {s.backlog.length ? (
-            <ul className="flex flex-col gap-2.5">
-              {s.backlog.map((b) => (
-                <li key={b.id}>
-                  <button onClick={() => nav.openBook(b.id)} className="flex w-full items-center gap-3 text-left active:opacity-60">
-                    <BookCover book={b} className="w-7 shrink-0" rounded="rounded-[3px]" />
-                    <span className="min-w-0 flex-1">
-                      <span className="line-clamp-1 text-[13px] font-medium">{b.title}</span>
-                      <span className="text-xs text-ink-3">{b.authors?.[0]}</span>
-                    </span>
-                    <span className="shrink-0 text-xs tabular-nums text-ink-2">{b.waitingDays}일째</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="py-4 text-center text-sm text-ink-3">기다리는 책이 없어요</p>
-          )}
-        </Card>
-      </div>
+      {tab === 'insights' && (
+        <>
+          <Card title="월별 완독">
+            <ColumnChart
+              data={s.monthly.map((v, i) => ({ label: `${i + 1}`, value: v, tip: `${year}년 ${MONTHS[i]}` }))}
+              unit="권"
+              labelEvery={mobile ? 2 : 1}
+            />
+            <MonthlyTable s={s} />
+          </Card>
+
+          <div className={`grid gap-4 ${mobile ? '' : 'grid-cols-3'}`}>
+            <Card title="요일별 활동" sub="어느 요일에 많이 읽었나">
+              <ColumnChart data={s.weekday.map((v, i) => ({ label: WEEKDAYS[i], value: v, tip: `${WEEKDAYS[i]}요일` }))} unit="회" height={110} />
+            </Card>
+            <Card title="많이 읽은 작가">
+              <RankBars items={s.topAuthors} empty="이 해에 다 읽은 책이 없어요" />
+            </Card>
+            <Card title="많이 읽은 출판사">
+              <RankBars items={s.topPublishers} empty="이 해에 다 읽은 책이 없어요" />
+            </Card>
+          </div>
+        </>
+      )}
+
+      {tab === 'shelf' && (
+        <>
+          <div className={`grid gap-4 ${mobile ? '' : 'grid-cols-2'}`}>
+            <Card title="상태">
+              <StackedBar
+                parts={[
+                  { label: '읽고 싶은', value: s.status.want, color: 'var(--viz-1)' },
+                  { label: '읽는 중', value: s.status.reading, color: 'var(--viz-2)' },
+                  { label: '다 읽음', value: s.status.done, color: 'var(--viz-3)' },
+                ]}
+              />
+            </Card>
+            <Card title="별점 분포">
+              <ColumnChart data={s.ratings.map((v, i) => ({ label: `★${i + 1}`, value: v, tip: `별 ${i + 1}개` }))} unit="권" height={110} />
+            </Card>
+          </div>
+          <div className={`grid gap-4 ${mobile ? '' : 'grid-cols-2'}`}>
+            <BookStackCard />
+            <Card title="오래 기다린 책" sub="읽고 싶은 책 중 가장 먼저 담은 책">
+              {s.backlog.length ? (
+                <ul className="flex flex-col gap-2.5">
+                  {s.backlog.map((b) => (
+                    <li key={b.id}>
+                      <button onClick={() => nav.openBook(b.id)} className="flex w-full items-center gap-3 text-left active:opacity-60">
+                        <BookCover book={b} className="w-7 shrink-0" rounded="rounded-[3px]" />
+                        <span className="min-w-0 flex-1">
+                          <span className="line-clamp-1 text-[13px] font-medium">{b.title}</span>
+                          <span className="text-xs text-ink-3">{b.authors?.[0]}</span>
+                        </span>
+                        <span className="shrink-0 text-xs tabular-nums text-ink-2">{b.waitingDays}일째</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="py-4 text-center text-sm text-ink-3">기다리는 책이 없어요</p>
+              )}
+            </Card>
+          </div>
+        </>
+      )}
+
+      {tab === 'badges' && <BadgesCard mobile={mobile} />}
     </div>
   )
 }
 
-/** 데스크톱 창: 통합 툴바 + 통계 */
+/** 데스크톱 창: 통합 툴바(제목 · 탭) + 통계 */
 export function StatsWindow() {
+  const [tab, setTab] = useState('summary')
   return (
     <div className="flex h-full flex-col">
-      <header className="window-drag flex h-[52px] shrink-0 items-center px-24">
+      <header className="window-drag relative flex h-[52px] shrink-0 items-center px-24">
         <h1 className="text-[15px] font-bold">통계</h1>
+        <div className="absolute left-1/2 -translate-x-1/2">
+          <Segmented size="sm" value={tab} onChange={setTab} options={STATS_TABS} />
+        </div>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto pt-1">
-        <StatsView platform="desktop" />
+        <StatsView platform="desktop" tab={tab} />
       </div>
     </div>
   )

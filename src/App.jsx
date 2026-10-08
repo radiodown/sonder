@@ -2,6 +2,7 @@ import { usePlatform } from './lib/platform'
 import { useThemeSync } from './lib/theme'
 import { lazy, Suspense, useEffect } from 'react'
 import { startDriveAutoSave } from './stores/drive'
+import { BadgeWatcher } from './apps/stats/BadgeWatcher'
 import { ConfirmHost } from './ui/ConfirmDialog'
 import { RefractionFilter } from './ui/Glass'
 
@@ -18,6 +19,7 @@ export default function App() {
       <RefractionFilter />
       <Suspense>{platform === 'mobile' ? <MobileShell /> : <DesktopShell />}</Suspense>
       <ConfirmHost />
+      <BadgeWatcher />
     </>
   )
 }

@@ -13,6 +13,7 @@ import { getApp, rootAppId } from '../../apps/registry'
 import { driveLoad, driveSave, driveStatusText } from '../../apps/settings/driveActions'
 import { useNav } from '../../lib/nav'
 import { useDrive } from '../../stores/drive'
+import { openPicker } from '../../stores/picker'
 import { useSettings } from '../../stores/settings'
 import { selectActive, useWindows } from '../../stores/windows'
 import { Glass } from '../../ui/Glass'
@@ -133,6 +134,7 @@ export function MenuBar({ onSpotlight }) {
         <Menu label="파일">
           <Item onSelect={nav.openAdd}>새 책 추가…</Item>
           <Item onSelect={() => nav.newReview()}>새 독후감…</Item>
+          <Item onSelect={openPicker}>다음 책 뽑기…</Item>
           <Item onSelect={() => nav.openApp('bookshelf')}>책장 열기</Item>
           {driveConfigured && (
             <>

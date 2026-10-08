@@ -2,6 +2,14 @@ import { dayKey } from '../../db/db'
 
 const DAY = 86_400_000
 // 히트맵에 세는 활동 (책 추가는 독서가 아니라서 뺍니다)
+/** 통계 탭. 데스크톱은 창 툴바, 모바일은 화면 맨 윗줄에 놓습니다. */
+export const STATS_TABS = [
+  { value: 'summary', label: '요약' },
+  { value: 'insights', label: '분석' },
+  { value: 'shelf', label: '책장' },
+  { value: 'badges', label: '배지' },
+]
+
 export const READING_TYPES = ['start', 'finish', 'review', 'memo']
 export const TYPE_LABELS = { start: '읽기 시작', finish: '완독', review: '독후감', memo: '메모' }
 

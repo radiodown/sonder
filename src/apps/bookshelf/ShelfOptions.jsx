@@ -1,6 +1,7 @@
 import * as DM from '@radix-ui/react-dropdown-menu'
-import { CaretDownIcon, CheckIcon, DotsThreeIcon, PlusIcon, SquaresFourIcon } from '@phosphor-icons/react'
+import { CaretDownIcon, CheckIcon, DiceFiveIcon, DotsThreeIcon, PlusIcon, SquaresFourIcon } from '@phosphor-icons/react'
 import { useNav } from '../../lib/nav'
+import { openPicker } from '../../stores/picker'
 import { Glass } from '../../ui/Glass'
 import { Segmented } from '../../ui/Segmented'
 import { SIZE_STEPS, SORTS, VIEWS, useShelfPrefs } from './shelfPrefs'
@@ -89,6 +90,9 @@ export function MobileShelfMenu() {
         <DM.Content align="end" sideOffset={8} className={`${menuCls} min-w-44 text-[15px]`}>
           <DM.Item onSelect={() => nav.openAdd()} className={`${itemCls} font-medium`}>
             <PlusIcon size={15} weight="bold" className="absolute left-2" />책 추가…
+          </DM.Item>
+          <DM.Item onSelect={openPicker} className={`${itemCls} font-medium`}>
+            <DiceFiveIcon size={15} weight="bold" className="absolute left-2" />다음 책 뽑기
           </DM.Item>
           <DM.Separator className="mx-2 my-1 h-px bg-line" />
           <MenuLabel>보기</MenuLabel>

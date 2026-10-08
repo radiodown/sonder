@@ -6,6 +6,7 @@ import { NavContext } from '../../lib/nav'
 import { useSolarBackground } from '../../lib/solar'
 import { useSettings, wallpaperId } from '../../stores/settings'
 import { selectActive, useWindows } from '../../stores/windows'
+import { NextBookPicker } from '../../apps/bookshelf/NextBookPicker'
 import { BookPickerDialog } from './BookPickerDialog'
 import { Dock } from './Dock'
 import { MenuBar } from './MenuBar'
@@ -69,6 +70,7 @@ export function DesktopShell() {
         <Dock />
         <Spotlight open={spotlight} onOpenChange={setSpotlight} />
         <BookPickerDialog open={picker} onOpenChange={setPicker} onPick={nav.writeFor} />
+        <NextBookPicker />
         <Toaster position="top-right" offset={40} theme="system" />
       </div>
     </NavContext.Provider>
