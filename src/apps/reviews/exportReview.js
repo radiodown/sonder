@@ -3,6 +3,8 @@
  * 모바일은 공유 시트로, 데스크톱(또는 공유를 못 하는 브라우저)은 파일로 내려받습니다.
  */
 
+import { byline } from '../../ui/byline'
+
 export const FORMATS = [
   { id: 'txt', label: '텍스트', ext: 'txt', type: 'text/plain' },
   // 공유 시트가 text/markdown 을 받지 않는 브라우저가 많아서 형식은 text/plain 으로 둡니다
@@ -114,8 +116,8 @@ function bodyOf(review) {
 
 function bookLine(book) {
   if (!book) return ''
-  const authors = book.authors?.length ? ` — ${book.authors.join(', ')}` : ''
-  return `${book.title}${authors}`
+  const credit = byline(book)
+  return credit ? `${book.title} — ${credit}` : book.title
 }
 
 function toText(review, book) {

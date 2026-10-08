@@ -1,7 +1,8 @@
 /**
  * 책 검색. 카카오(키가 있을 때)와 Google Books 결과를 합치고, 부족하면 Open Library 로 보충합니다.
  * 모든 결과는 같은 형태로 정규화됩니다:
- * { isbn, title, authors[], publisher, publishedDate, cover, description, pageCount, source }
+ * { isbn, title, authors[], translators[], publisher, publishedDate, cover, description, pageCount, source }
+ * 역자는 카카오만 알려 줍니다 (Google Books · Open Library 는 빈 배열)
  */
 const KAKAO_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY
 
@@ -35,6 +36,7 @@ async function searchKakao(query) {
     isbn: pickIsbn13(d.isbn),
     title: d.title,
     authors: d.authors ?? [],
+    translators: d.translators ?? [],
     publisher: d.publisher ?? '',
     publishedDate: d.datetime ? d.datetime.slice(0, 10) : '',
     cover: https(d.thumbnail),
@@ -59,6 +61,7 @@ async function searchGoogle(query) {
       isbn,
       title: v.subtitle ? `${v.title}: ${v.subtitle}` : v.title,
       authors: v.authors ?? [],
+      translators: [],
       publisher: v.publisher ?? '',
       publishedDate: v.publishedDate ?? '',
       cover: img || (isbn ? openLibraryCover(isbn) : ''),
@@ -84,6 +87,7 @@ async function searchOpenLibrary(query) {
       isbn,
       title: d.subtitle ? `${d.title}: ${d.subtitle}` : d.title,
       authors: d.author_name ?? [],
+      translators: [],
       publisher: d.publisher?.[0] ?? '',
       publishedDate: d.first_publish_year ? String(d.first_publish_year) : '',
       cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg` : '',
@@ -92,6 +96,20 @@ async function searchOpenLibrary(query) {
       source: 'openlibrary',
     }
   })
+}
+
+/**
+ * ISBN 으로 카카오에서 역자를 찾습니다. 역자 정보가 생기기 전에 추가한 책을 채울 때 씁니다.
+ * 카카오 키가 없거나 실패하면 null (다음에 다시 시도), 역자가 없으면 [].
+ */
+export async function lookupTranslators(isbn) {
+  if (!KAKAO_KEY || !isbn) return null
+  try {
+    const [hit] = await searchKakao(isbn)
+    return hit ? hit.translators : []
+  } catch {
+    return null
+  }
 }
 
 export async function searchBooks(query) {

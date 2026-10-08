@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { addBook, db } from '../../db/db'
 import { BookCover } from '../../ui/BookCover'
+import { byline } from '../../ui/byline'
 import { searchBooks } from './api'
 
 function ResultRow({ book, owned, onAdd }) {
@@ -14,7 +15,7 @@ function ResultRow({ book, owned, onAdd }) {
       <div className="min-w-0 flex-1">
         <p className="line-clamp-2 text-sm font-semibold leading-snug">{book.title}</p>
         <p className="mt-0.5 line-clamp-1 text-xs text-ink-2">
-          {[book.authors.join(', '), book.publisher, book.publishedDate?.slice(0, 4)].filter(Boolean).join(' · ')}
+          {[byline(book), book.publisher, book.publishedDate?.slice(0, 4)].filter(Boolean).join(' · ')}
         </p>
       </div>
       {owned ? (
@@ -35,7 +36,8 @@ function ResultRow({ book, owned, onAdd }) {
 }
 
 function ManualForm({ onAdded }) {
-  const [form, setForm] = useState({ title: '', authors: '', publisher: '', isbn: '', cover: '' })
+  const [form, setForm] = useState({ title: '', authors: '', translators: '', publisher: '', isbn: '', cover: '' })
+  const list = (v) => v.split(',').map((a) => a.trim()).filter(Boolean)
   const field = (key, label, props = {}) => (
     <label className="flex flex-col gap-1">
       <span className="text-xs font-medium text-ink-2">{label}</span>
@@ -52,7 +54,8 @@ function ManualForm({ onAdded }) {
     try {
       const id = await addBook({
         title: form.title.trim(),
-        authors: form.authors.split(',').map((a) => a.trim()).filter(Boolean),
+        authors: list(form.authors),
+        translators: list(form.translators),
         publisher: form.publisher.trim(),
         isbn: form.isbn.replace(/[-\s]/g, ''),
         cover: form.cover.trim(),
@@ -71,6 +74,7 @@ function ManualForm({ onAdded }) {
     <form onSubmit={submit} className="flex flex-col gap-3 py-3">
       {field('title', '제목 *', { required: true, autoFocus: true })}
       {field('authors', '저자 (쉼표로 구분)')}
+      {field('translators', '역자 (쉼표로 구분)')}
       {field('publisher', '출판사')}
       {field('isbn', 'ISBN', { inputMode: 'numeric' })}
       {field('cover', '표지 이미지 URL', { type: 'url' })}

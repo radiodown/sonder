@@ -1,5 +1,5 @@
 import { NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNav } from '../../lib/nav'
 import { toast } from 'sonner'
 import { STATUSES, dayKey, deleteBook, updateBook } from '../../db/db'
@@ -7,6 +7,8 @@ import { BookCover } from '../../ui/BookCover'
 import { confirmDialog } from '../../ui/ConfirmDialog'
 import { Segmented } from '../../ui/Segmented'
 import { StarRating } from '../../ui/StarRating'
+import { byline } from '../../ui/byline'
+import { lookupTranslators } from './api'
 import { useBook } from './hooks'
 import { useBookReviews } from '../reviews/hooks'
 import { ReviewRow } from '../reviews/ReviewList'
@@ -92,8 +94,27 @@ function description(book) {
   return book.source === 'kakao' && !SENTENCE_END.test(text) ? `${text}…` : text
 }
 
+/**
+ * 역자 정보가 생기기 전에 추가한 책은 처음 열 때 ISBN 으로 역자를 찾아 채웁니다.
+ * (찾았는데 없으면 [] 로 저장해서 다시 묻지 않고, 실패하면 다음에 열 때 다시 시도)
+ */
+function useTranslatorBackfill(book) {
+  const missing = book && book.translators === undefined && book.source !== 'manual' && book.isbn
+  useEffect(() => {
+    if (!missing) return
+    let alive = true
+    lookupTranslators(book.isbn).then((translators) => {
+      if (alive && translators) updateBook(book.id, { translators })
+    })
+    return () => {
+      alive = false
+    }
+  }, [missing, book?.id, book?.isbn])
+}
+
 export function BookDetail({ bookId, onDeleted }) {
   const book = useBook(bookId)
+  useTranslatorBackfill(book)
 
   if (book === undefined) return null
   if (!book) return <div className="p-10 text-center text-ink-2">책을 찾을 수 없습니다</div>
@@ -128,7 +149,7 @@ export function BookDetail({ bookId, onDeleted }) {
         <h1 className="text-xl font-bold leading-tight" data-selectable>
           {book.title}
         </h1>
-        <p className="mt-1 text-ink-2">{book.authors?.join(', ')}</p>
+        <p className="mt-1 text-ink-2">{byline(book)}</p>
       </div>
 
       <div className="flex flex-col items-center gap-4">

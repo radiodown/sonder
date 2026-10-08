@@ -33,7 +33,10 @@ export function useBooks(status = 'all', sort = 'recent', search = '') {
   return useLiveQuery(async () => {
     let list = status === 'all' ? await db.books.toArray() : await db.books.where('status').equals(status).toArray()
     const q = search.trim().toLowerCase()
-    if (q) list = list.filter((b) => `${b.title} ${b.authors.join(' ')} ${b.publisher ?? ''}`.toLowerCase().includes(q))
+    if (q)
+      list = list.filter((b) =>
+        `${b.title} ${b.authors.join(' ')} ${b.translators?.join(' ') ?? ''} ${b.publisher ?? ''}`.toLowerCase().includes(q),
+      )
     return sortBooks(list, sort)
   }, [status, sort, search])
 }
