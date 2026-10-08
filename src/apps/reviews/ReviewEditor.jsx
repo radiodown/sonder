@@ -19,6 +19,7 @@ import { useBook } from '../bookshelf/hooks'
 import { BookCover } from '../../ui/BookCover'
 import { Glass } from '../../ui/Glass'
 import { formatReviewDate, useReview } from './hooks'
+import { pasteHtmlSource } from './pasteHtml'
 
 // 편집기가 열려 있는 독후감 id → 열린 수. StrictMode 의 mount→unmount→mount 에도
 // 빈 독후감이 지워지지 않도록, 닫힌 뒤 한 틱 기다렸다가 아무도 열고 있지 않을 때만 정리합니다.
@@ -141,7 +142,19 @@ function EditorBody({ review, onOpenBook, autoFocus, toolbarClassName }) {
       CharacterCount,
     ],
     content: review.content || '',
-    editorProps: { attributes: { class: 'review-prose', 'aria-label': '독후감 본문' } },
+    editorProps: {
+      attributes: { class: 'review-prose', 'aria-label': '독후감 본문' },
+      // HTML 소스를 일반 텍스트로 붙여 넣으면 태그 대신 서식으로 넣습니다.
+      // 제목이 비어 있으면 맨 앞의 <h1> 을 독후감 제목으로 씁니다.
+      handlePaste: (view, event) =>
+        pasteHtmlSource(view, event, {
+          takeTitle: !titleRef.current?.value.trim(),
+          onTitle: (t) => {
+            setTitle(t)
+            updateReview(review.id, { title: t })
+          },
+        }),
+    },
     onUpdate: ({ editor: e }) => {
       clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => updateReview(review.id, { content: e.getHTML(), text: e.getText() }), 300)

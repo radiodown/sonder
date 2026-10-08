@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon, NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
+import { ExportIcon, MagnifyingGlassIcon, NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { deleteReview } from '../../db/db'
@@ -6,6 +6,7 @@ import { useNav } from '../../lib/nav'
 import { useWindows } from '../../stores/windows'
 import { confirmDialog } from '../../ui/ConfirmDialog'
 import { Glass } from '../../ui/Glass'
+import { ReviewShareMenu } from './ReviewShareMenu'
 import { useReviews } from './hooks'
 import { LazyReviewEditor as ReviewEditor } from './LazyReviewEditor'
 import { ReviewRow } from './ReviewList'
@@ -53,6 +54,17 @@ export function ReviewsWindow({ win }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="window-drag flex h-[52px] shrink-0 items-center justify-end gap-2 px-4">
+          {selectedId && (
+            <ReviewShareMenu reviewId={selectedId}>
+              <button
+                aria-label="내보내기"
+                title="내보내기"
+                className="flex size-8 items-center justify-center rounded-full outline-none hover:bg-fill data-[state=open]:bg-fill"
+              >
+                <ExportIcon size={18} />
+              </button>
+            </ReviewShareMenu>
+          )}
           <button
             onClick={remove}
             disabled={!selectedId}

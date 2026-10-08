@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon, CaretLeftIcon, GlobeIcon, NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
+import { ArrowUpRightIcon, CaretLeftIcon, ExportIcon, GlobeIcon, NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
 import { AnimatePresence, animate, motion, useDragControls, useMotionValue } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { useLocation, useMatch, useNavigate } from 'react-router'
@@ -14,6 +14,7 @@ import { useBooks } from '../../apps/bookshelf/hooks'
 import { BookPicker } from '../../apps/reviews/BookPicker'
 import { useReviews } from '../../apps/reviews/hooks'
 import { LazyReviewEditor as ReviewEditor } from '../../apps/reviews/LazyReviewEditor'
+import { ReviewShareMenu } from '../../apps/reviews/ReviewShareMenu'
 import { ReviewRow } from '../../apps/reviews/ReviewList'
 import { Settings } from '../../apps/settings/Settings'
 import { StatsView } from '../../apps/stats/StatsView'
@@ -300,6 +301,16 @@ export function MobileShell() {
               onBack={back}
               trailing={
                 <>
+                  <ReviewShareMenu reviewId={reviewMatch.params.rid}>
+                    <Glass
+                      as="button"
+                      refract
+                      aria-label="공유"
+                      className="flex size-11 items-center justify-center rounded-full outline-none"
+                    >
+                      <ExportIcon size={20} />
+                    </Glass>
+                  </ReviewShareMenu>
                   <Glass
                     as="button"
                     refract
