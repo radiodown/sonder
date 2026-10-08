@@ -4,6 +4,7 @@ import { useNav } from '../../lib/nav'
 import { toast } from 'sonner'
 import { STATUSES, dayKey, deleteBook, updateBook } from '../../db/db'
 import { BookCover } from '../../ui/BookCover'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { Segmented } from '../../ui/Segmented'
 import { StarRating } from '../../ui/StarRating'
 import { useBook } from './hooks'
@@ -98,8 +99,13 @@ export function BookDetail({ bookId, onDeleted }) {
   if (!book) return <div className="p-10 text-center text-ink-2">책을 찾을 수 없습니다</div>
 
   const remove = async () => {
-    if (!confirm(`'${book.title}'을(를) 책장에서 삭제할까요?
-이 책의 독후감도 함께 삭제됩니다.`)) return
+    const ok = await confirmDialog({
+      title: `'${book.title}'을(를) 책장에서 삭제할까요?`,
+      message: '이 책의 독후감도 함께 삭제됩니다.',
+      confirmLabel: '삭제',
+      destructive: true,
+    })
+    if (!ok) return
     await deleteBook(book.id)
     toast('책을 삭제했습니다')
     onDeleted?.()

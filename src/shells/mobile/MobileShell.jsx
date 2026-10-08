@@ -20,6 +20,7 @@ import { StatsView } from '../../apps/stats/StatsView'
 import { STATUSES, addReview, deleteReview } from '../../db/db'
 import { NavContext, useNav } from '../../lib/nav'
 import { markAppBack, wasSwipeBack } from '../../lib/swipeBack'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { Glass } from '../../ui/Glass'
 import { Segmented } from '../../ui/Segmented'
 import { Screen } from './Screen'
@@ -275,7 +276,7 @@ export function MobileShell() {
   }, [navigate, location.pathname])
 
   const removeReview = async (rid) => {
-    if (!confirm('이 독후감을 삭제할까요?')) return
+    if (!(await confirmDialog({ title: '이 독후감을 삭제할까요?', confirmLabel: '삭제', destructive: true }))) return
     back()
     await deleteReview(Number(rid))
   }

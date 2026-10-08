@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { deleteReview } from '../../db/db'
 import { useNav } from '../../lib/nav'
 import { useWindows } from '../../stores/windows'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { Glass } from '../../ui/Glass'
 import { useReviews } from './hooks'
 import { LazyReviewEditor as ReviewEditor } from './LazyReviewEditor'
@@ -19,7 +20,8 @@ export function ReviewsWindow({ win }) {
   const select = (reviewId) => update(win.id, { props: { ...win.props, reviewId } })
 
   const remove = async () => {
-    if (!selectedId || !confirm('이 독후감을 삭제할까요?')) return
+    if (!selectedId) return
+    if (!(await confirmDialog({ title: '이 독후감을 삭제할까요?', confirmLabel: '삭제', destructive: true }))) return
     const idx = reviews?.findIndex((r) => r.id === selectedId) ?? -1
     const next = reviews?.[idx + 1] ?? reviews?.[idx - 1]
     await deleteReview(selectedId)

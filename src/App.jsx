@@ -2,6 +2,7 @@ import { usePlatform } from './lib/platform'
 import { useThemeSync } from './lib/theme'
 import { lazy, Suspense, useEffect } from 'react'
 import { startDriveAutoSave } from './stores/drive'
+import { ConfirmHost } from './ui/ConfirmDialog'
 import { RefractionFilter } from './ui/Glass'
 
 // 플랫폼별 셸은 필요한 쪽만 내려받습니다
@@ -16,6 +17,7 @@ export default function App() {
     <>
       <RefractionFilter />
       <Suspense>{platform === 'mobile' ? <MobileShell /> : <DesktopShell />}</Suspense>
+      <ConfirmHost />
     </>
   )
 }

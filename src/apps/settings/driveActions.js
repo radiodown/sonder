@@ -1,5 +1,6 @@
 import { toast } from 'sonner'
 import { ConflictError, loadFromDrive, saveToDrive, useDrive } from '../../stores/drive'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 
 const quiet = (err) => err?.name === 'AbortError'
 
@@ -15,9 +16,13 @@ export async function driveSave() {
 }
 
 export async function resolveConflictByOverwrite() {
-  const ok = confirm(
-    'Google Drive 에 다른 기기에서 저장한 더 최근 책장이 있습니다.\n이 기기의 책장으로 덮어쓸까요?\n\n(Drive 쪽을 받으려면 취소 후 "Drive 에서 불러오기"를 누르세요)',
-  )
+  const ok = await confirmDialog({
+    title: 'Drive 에 더 최근 책장이 있어요',
+    message:
+      '다른 기기에서 저장한 책장입니다. 이 기기의 책장으로 덮어쓸까요?\n\nDrive 쪽을 받으려면 취소 후 "Drive 에서 불러오기"를 누르세요.',
+    confirmLabel: '덮어쓰기',
+    destructive: true,
+  })
   if (!ok) return
   try {
     await saveToDrive({ force: true })
@@ -30,11 +35,14 @@ export async function resolveConflictByOverwrite() {
 /** 사용자가 누른 "Drive 에서 불러오기". 이 기기의 책장을 바꾸므로 확인을 받습니다. */
 export async function driveLoad() {
   const { dirty } = useDrive.getState()
-  const ok = confirm(
-    dirty
-      ? '이 기기에 Google Drive 에 저장하지 않은 변경이 있습니다.\nDrive 의 책장으로 바꾸면 그 변경은 사라집니다. 계속할까요?'
-      : 'Google Drive 의 책장으로 이 기기의 책장을 바꿀까요?',
-  )
+  const ok = await confirmDialog({
+    title: 'Drive 에서 불러올까요?',
+    message: dirty
+      ? '이 기기에 Google Drive 에 저장하지 않은 변경이 있습니다.\nDrive 의 책장으로 바꾸면 그 변경은 사라집니다.'
+      : '이 기기의 책장이 Google Drive 의 책장으로 바뀝니다.',
+    confirmLabel: '불러오기',
+    destructive: dirty,
+  })
   if (!ok) return
   try {
     const found = await loadFromDrive()
