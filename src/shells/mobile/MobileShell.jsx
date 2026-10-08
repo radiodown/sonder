@@ -16,7 +16,7 @@ import { BookPicker } from '../../apps/reviews/BookPicker'
 import { useReviews } from '../../apps/reviews/hooks'
 import { LazyReviewEditor as ReviewEditor } from '../../apps/reviews/LazyReviewEditor'
 import { ReviewShareMenu } from '../../apps/reviews/ReviewShareMenu'
-import { ReviewRow } from '../../apps/reviews/ReviewList'
+import { ReviewColumn } from '../../apps/reviews/ReviewList'
 import { Settings } from '../../apps/settings/Settings'
 import { StatsView } from '../../apps/stats/StatsView'
 import { STATS_TABS } from '../../apps/stats/stats'
@@ -208,9 +208,9 @@ function ReviewsScreen() {
             </button>
           </div>
         ) : (
-          <div className="rounded-2xl bg-surface p-1 dark:bg-white/[0.07]">
+          <div className="flex flex-col gap-3">
             {reviews?.map((r) => (
-              <ReviewRow key={r.id} review={r} onClick={() => nav.openReview(r.id)} />
+              <ReviewColumn key={r.id} review={r} onClick={() => nav.openReview(r.id)} />
             ))}
           </div>
         )}
