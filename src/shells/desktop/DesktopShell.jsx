@@ -1,9 +1,10 @@
-import { AnimatePresence } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import { Toaster } from 'sonner'
 import { addReview } from '../../db/db'
 import { NavContext } from '../../lib/nav'
-import { useSolarBackground } from '../../lib/solar'
+import { solarBackground, useSolarBackground } from '../../lib/solar'
+import { dateAtMinute, useTimelapse } from '../../lib/timelapse'
 import { useSettings, wallpaperId } from '../../stores/settings'
 import { selectActive, useWindows } from '../../stores/windows'
 import { NextBookPicker } from '../../apps/bookshelf/NextBookPicker'
@@ -12,6 +13,25 @@ import { Dock } from './Dock'
 import { MenuBar } from './MenuBar'
 import { Spotlight } from './Spotlight'
 import { Window } from './Window'
+
+/** Solar 타임랩스(메뉴바 시계 길게 누르기) 동안 배경화면 위에 덮는 층. 이것만 다시 그려서 창들은 영향받지 않습니다. */
+function TimelapseLayer() {
+  const minute = useTimelapse((s) => s.minute)
+  return (
+    <AnimatePresence>
+      {minute !== null && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+          className="pointer-events-none absolute inset-0"
+          style={{ background: solarBackground(dateAtMinute(minute)) }}
+        />
+      )}
+    </AnimatePresence>
+  )
+}
 
 export function DesktopShell() {
   const wallpaper = wallpaperId(useSettings((s) => s.wallpaper))
@@ -58,6 +78,7 @@ export function DesktopShell() {
         className={`wallpaper-${wallpaper} fixed inset-0 flex flex-col overflow-hidden`}
         style={solar ? { background: solar } : undefined}
       >
+        <TimelapseLayer />
         <MenuBar onSpotlight={() => setSpotlight(true)} />
         {/* 창이 움직일 수 있는 영역 (메뉴바 아래) */}
         <main className="relative isolate flex-1">

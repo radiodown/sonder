@@ -8,10 +8,11 @@ import {
   CloudWarningIcon,
   MagnifyingGlassIcon,
 } from '@phosphor-icons/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getApp, rootAppId } from '../../apps/registry'
 import { driveLoad, driveSave, driveStatusText } from '../../apps/settings/driveActions'
 import { useNav } from '../../lib/nav'
+import { dateAtMinute, startTimelapse, useTimelapse } from '../../lib/timelapse'
 import { useDrive } from '../../stores/drive'
 import { openPicker } from '../../stores/picker'
 import { useSettings } from '../../stores/settings'
@@ -86,16 +87,29 @@ function DriveMenu() {
   )
 }
 
+/** 메뉴바 시계. (숨은 기능) 길게 누르면 Solar 타임랩스가 돌고, 그동안 시계도 타임랩스 시각을 보여 줍니다. */
 function Clock() {
   const [now, setNow] = useState(() => new Date())
+  const lapse = useTimelapse((s) => s.minute)
+  const hold = useRef(null)
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 10_000)
     return () => clearInterval(t)
   }, [])
-  const date = now.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
-  const time = now.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })
+  const shown = lapse === null ? now : dateAtMinute(lapse)
+  const date = shown.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
+  const time = shown.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })
+  const cancel = () => clearTimeout(hold.current)
   return (
-    <span className="px-2 text-[13px] font-medium tabular-nums">
+    <span
+      onPointerDown={() => {
+        cancel()
+        hold.current = setTimeout(startTimelapse, 700)
+      }}
+      onPointerUp={cancel}
+      onPointerLeave={cancel}
+      className={`select-none rounded-md px-2 text-[13px] font-medium tabular-nums ${lapse === null ? '' : 'bg-white/25 dark:bg-white/15'}`}
+    >
       {date} {time}
     </span>
   )
