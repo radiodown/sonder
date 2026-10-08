@@ -64,7 +64,7 @@ function DockMenu({ items }) {
  * Dock 아이콘. macOS 처럼 우클릭하거나 꾹 누르고 있으면 메뉴가 아이콘 위에 열립니다.
  * (마우스 제스처 같은 확장 프로그램이 우클릭을 가로채도 꾹 누르기는 동작합니다)
  */
-function DockItem({ mouseX, label, running, onClick, menu, children }) {
+function DockItem({ mouseX, label, running, onClick, clickOpensMenu = false, menu, children }) {
   const ref = useRef(null)
   const [open, setOpen] = useState(false)
   const holdTimer = useRef(null)
@@ -111,7 +111,8 @@ function DockItem({ mouseX, label, running, onClick, menu, children }) {
             openedByHold.current = false
             return
           }
-          onClick()
+          if (clickOpensMenu) setOpen(true)
+          else onClick()
         }}
         aria-label={label}
         aria-haspopup={menu ? 'menu' : undefined}
@@ -134,17 +135,82 @@ function DockItem({ mouseX, label, running, onClick, menu, children }) {
   )
 }
 
-/** 책 정보 창: 그 책의 표지로 보여 줍니다 */
-function BookTile({ bookId, children }) {
-  return children(useBook(bookId) ?? null)
+/** 책 더미 안의 표지 한 권 (아래로 갈수록 살짝 비껴 쌓임) */
+function StackCover({ bookId, depth }) {
+  const book = useBook(bookId)
+  const tilt = [0, -7, 6][depth]
+  return (
+    <span
+      className="absolute inset-0 flex items-end justify-center"
+      style={{ zIndex: 3 - depth, transform: `translate(${depth * 3}px, ${-depth * 2}px) rotate(${tilt}deg)` }}
+    >
+      {book ? (
+        <BookCover book={book} rounded="rounded-[2px_5px_5px_2px]" className="h-full w-auto" />
+      ) : (
+        <AppIcon app={getApp('bookDetail')} />
+      )}
+    </span>
+  )
+}
+
+/** 메뉴 한 줄: 작은 표지 + 제목 */
+function BookMenuRow({ bookId, minimized }) {
+  const book = useBook(bookId)
+  return (
+    <span className={`flex min-w-0 max-w-64 items-center gap-2.5 ${minimized ? 'opacity-60' : ''}`}>
+      {book && <BookCover book={book} rounded="rounded-[2px]" className="w-5 shrink-0" />}
+      <span className="truncate">{book?.title ?? '책 정보'}</span>
+    </span>
+  )
+}
+
+/**
+ * 열린 책 정보 창들을 Dock 의 한 칸에 겹쳐 쌓습니다. (macOS 에서 브라우저 창 여러 개가 한 아이콘에 모이듯이)
+ * 한 권이면 누르자마자 그 창으로, 여러 권이면 위에 목록이 떠서 고릅니다. 닫기는 모두 닫습니다.
+ */
+function BookStack({ mouseX, wins, restore, closeAll, showAll }) {
+  const byZ = [...wins].sort((a, b) => b.z - a.z) // 가장 최근에 본 창이 맨 위
+  const many = wins.length > 1
+  const menu = [
+    ...byZ.map((w) => ({ label: <BookMenuRow bookId={w.props.bookId} minimized={w.minimized} />, onSelect: () => restore(w) })),
+    'sep',
+    ...(many ? [{ label: '모두 보기', onSelect: showAll }] : []),
+    { label: many ? `모두 닫기 (${wins.length})` : '닫기', onSelect: closeAll },
+  ]
+  return (
+    <DockItem
+      mouseX={mouseX}
+      label={many ? `책 정보 ${wins.length}개` : '책 정보'}
+      running={wins.some((w) => !w.minimized)}
+      onClick={() => restore(byZ[0])}
+      clickOpensMenu={many}
+      menu={menu}
+    >
+      <span className="relative block aspect-square w-full">
+        {byZ.slice(0, 3).map((w, i) => (
+          <StackCover key={w.id} bookId={w.props.bookId} depth={i} />
+        ))}
+        {many && (
+          <span className="absolute -right-1 -top-1 z-10 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white shadow">
+            {wins.length}
+          </span>
+        )}
+      </span>
+    </DockItem>
+  )
 }
 
 export function Dock() {
   const nav = useNav()
   const mouseX = useMotionValue(Infinity)
   const { windows, update, focus, close, showApp, hideApp, quitApp } = useWindows()
-  // Dock 오른쪽 칸: 최소화된 창 + 열려 있는 책 정보 창 (여러 권을 띄워도 Dock 에서 골라 갈 수 있게)
-  const tiles = windows.filter((w) => w.minimized || w.appId === 'bookDetail')
+  // Dock 오른쪽 칸: 책 정보 창 더미 하나 + 그 밖의 최소화된 창
+  const bookWins = windows.filter((w) => w.appId === 'bookDetail')
+  const tiles = windows.filter((w) => w.minimized && w.appId !== 'bookDetail')
+  const restore = (w) => {
+    update(w.id, { minimized: false })
+    focus(w.id)
+  }
 
   // 앱별 빠른 동작 (macOS Dock 메뉴처럼)
   const quickActions = {
@@ -190,54 +256,33 @@ export function Dock() {
             <AppIcon app={app} />
           </DockItem>
         ))}
-        {tiles.length > 0 && <span className="mx-1 mb-1 h-11 w-px self-end bg-ink/20" />}
-        {tiles.map((w) => {
-          const restore = () => {
-            update(w.id, { minimized: false })
-            focus(w.id)
-          }
-          const tile = (label, icon) => (
-            <DockItem
-              key={w.id}
-              mouseX={mouseX}
-              label={label}
-              running={!w.minimized}
-              onClick={restore}
-              menu={[
-                { label: w.minimized ? '복원' : '보기', onSelect: restore },
-                ...(w.minimized ? [] : [{ label: '최소화', onSelect: () => update(w.id, { minimized: true }) }]),
-                'sep',
-                { label: '닫기', onSelect: () => close(w.id) },
-              ]}
-            >
-              {icon}
-            </DockItem>
-          )
-          if (w.appId === 'bookDetail') {
-            return (
-              <BookTile key={w.id} bookId={w.props.bookId}>
-                {(book) =>
-                  tile(
-                    book?.title ?? '책 정보',
-                    <span className="flex aspect-square w-full items-end justify-center">
-                      {book ? (
-                        <BookCover book={book} rounded="rounded-[2px_5px_5px_2px]" className="h-full w-auto" />
-                      ) : (
-                        <AppIcon app={getApp(w.appId)} />
-                      )}
-                    </span>,
-                  )
-                }
-              </BookTile>
-            )
-          }
-          return tile(
-            getApp(w.appId).name,
+        {(bookWins.length > 0 || tiles.length > 0) && <span className="mx-1 mb-1 h-11 w-px self-end bg-ink/20" />}
+        {bookWins.length > 0 && (
+          <BookStack
+            mouseX={mouseX}
+            wins={bookWins}
+            restore={restore}
+            showAll={() => [...bookWins].sort((a, b) => a.z - b.z).forEach(restore)}
+            closeAll={() => bookWins.forEach((w) => close(w.id))}
+          />
+        )}
+        {tiles.map((w) => (
+          <DockItem
+            key={w.id}
+            mouseX={mouseX}
+            label={getApp(w.appId).name}
+            onClick={() => restore(w)}
+            menu={[
+              { label: '복원', onSelect: () => restore(w) },
+              'sep',
+              { label: '닫기', onSelect: () => close(w.id) },
+            ]}
+          >
             <span className="flex aspect-square w-full items-center justify-center rounded-[22%] bg-surface p-[12%] shadow">
               <AppIcon app={getApp(w.appId)} />
-            </span>,
-          )
-        })}
+            </span>
+          </DockItem>
+        ))}
       </Glass>
     </div>
   )
