@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Toaster } from 'sonner'
 import { addReview } from '../../db/db'
 import { NavContext } from '../../lib/nav'
-import { useSettings } from '../../stores/settings'
+import { useSolarBackground } from '../../lib/solar'
+import { useSettings, wallpaperId } from '../../stores/settings'
 import { selectActive, useWindows } from '../../stores/windows'
 import { BookPickerDialog } from './BookPickerDialog'
 import { Dock } from './Dock'
@@ -12,7 +13,9 @@ import { Spotlight } from './Spotlight'
 import { Window } from './Window'
 
 export function DesktopShell() {
-  const wallpaper = useSettings((s) => s.wallpaper)
+  const wallpaper = wallpaperId(useSettings((s) => s.wallpaper))
+  const solarTime = useSettings((s) => s.solarTime)
+  const solar = useSolarBackground(wallpaper === 'solar', solarTime)
   const windows = useWindows((s) => s.windows)
   const active = useWindows(selectActive)
   const open = useWindows((s) => s.open)
@@ -50,7 +53,10 @@ export function DesktopShell() {
 
   return (
     <NavContext.Provider value={nav}>
-      <div className={`wallpaper-${wallpaper} fixed inset-0 flex flex-col overflow-hidden`}>
+      <div
+        className={`wallpaper-${wallpaper} fixed inset-0 flex flex-col overflow-hidden`}
+        style={solar ? { background: solar } : undefined}
+      >
         <MenuBar onSpotlight={() => setSpotlight(true)} />
         {/* 창이 움직일 수 있는 영역 (메뉴바 아래) */}
         <main className="relative isolate flex-1">

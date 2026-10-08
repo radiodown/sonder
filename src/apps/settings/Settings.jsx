@@ -1,4 +1,5 @@
 import {
+  ArrowCounterClockwiseIcon,
   CloudArrowDownIcon,
   CloudArrowUpIcon,
   DownloadSimpleIcon,
@@ -9,7 +10,10 @@ import { useRef } from 'react'
 import { toast } from 'sonner'
 import { exportBooks, importBooks } from '../../db/db'
 import { disconnectDrive, setAutoSave, useDrive } from '../../stores/drive'
-import { WALLPAPERS, useSettings } from '../../stores/settings'
+import { usePlatform } from '../../lib/platform'
+import { confirmDialog } from '../../ui/ConfirmDialog'
+import { SOLAR_PHASES, solarBackground, useSolarBackground } from '../../lib/solar'
+import { GLASS_DEFAULTS, WALLPAPERS, WINDOW_DEFAULTS, useSettings, wallpaperId } from '../../stores/settings'
 import { Segmented } from '../../ui/Segmented'
 import { useCounts } from '../bookshelf/hooks'
 import { driveLoad, driveSave, driveStatusText, resolveConflictByOverwrite } from './driveActions'
@@ -28,6 +32,71 @@ function Row({ label, children }) {
     <div className="flex min-h-12 items-center justify-between gap-4 px-4 py-2">
       <span className="text-[15px]">{label}</span>
       {children}
+    </div>
+  )
+}
+
+/** 설정용 슬라이더 한 줄: 이름 · 양 끝 설명 · 막대 */
+function SliderRow({ label, min, max, step, value, onChange, left, right }) {
+  return (
+    <div className="px-4 py-2.5">
+      <div className="mb-1.5 text-[15px]">{label}</div>
+      <div className="flex items-center gap-3">
+        <span className="w-8 shrink-0 text-xs text-ink-2">{left}</span>
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          aria-label={label}
+          className="h-1 min-w-0 flex-1 accent-[var(--accent)]"
+        />
+        <span className="w-8 shrink-0 text-right text-xs text-ink-2">{right}</span>
+      </div>
+    </div>
+  )
+}
+
+/** 흐림·투명도 슬라이더 묶음. keys = [흐림 설정 키, 투명도 설정 키] */
+function EffectSliders({ title, hint, keys: [blurKey, clarityKey], defaults, blurMax }) {
+  const s = useSettings()
+  const changed = s[blurKey] !== defaults.blur || s[clarityKey] !== defaults.clarity
+  return (
+    <div className="border-t border-line">
+      <div className="flex items-baseline justify-between gap-3 px-4 pt-3">
+        <span className="text-xs font-medium text-ink-2">
+          {title} <span className="font-normal text-ink-3">· {hint}</span>
+        </span>
+        <button
+          onClick={() => s.set({ [blurKey]: defaults.blur, [clarityKey]: defaults.clarity })}
+          disabled={!changed}
+          className="flex shrink-0 items-center gap-1 text-xs font-medium text-accent disabled:text-ink-3"
+        >
+          <ArrowCounterClockwiseIcon size={12} weight="bold" /> 초기화
+        </button>
+      </div>
+      <SliderRow
+        label="흐림"
+        min={0}
+        max={blurMax}
+        step={1}
+        value={s[blurKey]}
+        onChange={(v) => s.set({ [blurKey]: v })}
+        left="또렷"
+        right="뿌옇게"
+      />
+      <SliderRow
+        label="투명도"
+        min={0}
+        max={1}
+        step={0.05}
+        value={s[clarityKey]}
+        onChange={(v) => s.set({ [clarityKey]: v })}
+        left="진하게"
+        right="맑게"
+      />
     </div>
   )
 }
@@ -100,8 +169,23 @@ function DriveGroup() {
 
 export function Settings() {
   const s = useSettings()
+  const solar = useSolarBackground(true, s.solarTime)
+  const solarNow = useSolarBackground() // '자동' 견본: 지금 시각의 색
+  const mobile = usePlatform() === 'mobile' // 모바일에는 배경화면이 없어서 그 설정도 숨깁니다
   const counts = useCounts()
   const fileRef = useRef(null)
+
+  const resetAll = async () => {
+    const ok = await confirmDialog({
+      title: '설정을 초기화할까요?',
+      message: '테마 · 배경화면 · 유리 효과 · 책장 보기 설정이 처음 상태로 돌아갑니다.\n책 · 독후감 · 독서 목표는 그대로 남습니다.',
+      confirmLabel: '초기화',
+      destructive: true,
+    })
+    if (!ok) return
+    s.reset()
+    toast('설정을 초기화했습니다')
+  }
 
   const download = async () => {
     const blob = new Blob([await exportBooks()], { type: 'application/json' })
@@ -139,9 +223,6 @@ export function Settings() {
             ]}
           />
         </Row>
-        <Row label="유리 굴절 효과">
-          <Toggle label="유리 굴절 효과" checked={s.refraction} onChange={(refraction) => s.set({ refraction })} />
-        </Row>
         <Row label="레이아웃">
           <Segmented
             size="sm"
@@ -154,20 +235,59 @@ export function Settings() {
             ]}
           />
         </Row>
+        <EffectSliders
+          title="유리 효과"
+          hint="메뉴바 · Dock · 탭바 · 메뉴 · 사이드바"
+          keys={['glassBlur', 'glassClarity']}
+          defaults={GLASS_DEFAULTS}
+          blurMax={30}
+        />
+        {!mobile && (
+          <EffectSliders
+            title="창"
+            hint="창 본체 (글을 읽고 쓰는 곳)"
+            keys={['windowBlur', 'windowClarity']}
+            defaults={WINDOW_DEFAULTS}
+            blurMax={60}
+          />
+        )}
       </Group>
 
-      <Group title="배경화면">
-        <div className="grid grid-cols-4 gap-3 p-4">
-          {WALLPAPERS.map((w) => (
-            <button key={w.id} onClick={() => s.set({ wallpaper: w.id })} className="flex flex-col items-center gap-1.5">
-              <span
-                className={`wallpaper-${w.id} aspect-[4/3] w-full rounded-lg ring-offset-2 ring-offset-transparent ${s.wallpaper === w.id ? 'ring-[3px] ring-accent' : 'ring-1 ring-line'}`}
-              />
-              <span className="text-xs text-ink-2">{w.name}</span>
-            </button>
-          ))}
-        </div>
-      </Group>
+      {!mobile && (
+        <Group title="배경화면">
+          <div className="grid grid-cols-4 gap-3 p-4">
+            {WALLPAPERS.map((w) => (
+              <button key={w.id} onClick={() => s.set({ wallpaper: w.id })} className="flex flex-col items-center gap-1.5">
+                <span
+                  className={`wallpaper-${w.id} aspect-[4/3] w-full rounded-lg ring-offset-2 ring-offset-transparent ${wallpaperId(s.wallpaper) === w.id ? 'ring-[3px] ring-accent' : 'ring-1 ring-line'}`}
+                  style={w.id === 'solar' ? { background: solar } : undefined}
+                />
+                <span className="text-xs text-ink-2">{w.name}</span>
+              </button>
+            ))}
+          </div>
+          {wallpaperId(s.wallpaper) === 'solar' && (
+            <div className="border-t border-line px-4 pb-4 pt-3">
+              <p className="mb-2.5 text-xs text-ink-2">시간대 · 자동이면 지금 시각에 맞춰 바뀝니다</p>
+              <div className="grid grid-cols-5 gap-x-2 gap-y-3">
+                {[{ id: 'auto', label: '자동' }, ...SOLAR_PHASES].map((p) => {
+                  const on = (s.solarTime ?? 'auto') === p.id
+                  return (
+                    <button key={p.id} onClick={() => s.set({ solarTime: p.id })} className="flex flex-col items-center gap-1">
+                      <span
+                        className={`size-9 rounded-full ring-offset-2 ring-offset-transparent ${on ? 'ring-[3px] ring-accent' : 'ring-1 ring-line'}`}
+                        // 자동은 지금 시각의 색, 나머지는 그 단계의 색
+                        style={{ background: p.id === 'auto' ? solarNow : solarBackground(null, p.id) }}
+                      />
+                      <span className={`text-[11px] ${on ? 'font-semibold text-ink' : 'text-ink-2'}`}>{p.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </Group>
+      )}
 
       <DriveGroup />
 
@@ -182,6 +302,12 @@ export function Settings() {
           <UploadSimpleIcon size={20} /> 백업 파일 가져오기
         </button>
         <input ref={fileRef} type="file" accept="application/json" hidden onChange={upload} />
+      </Group>
+
+      <Group>
+        <button onClick={resetAll} className="flex w-full items-center gap-3 px-4 py-3.5 text-[15px] text-red-500">
+          <ArrowCounterClockwiseIcon size={20} /> 설정 초기화
+        </button>
       </Group>
 
       <p className="text-center text-xs text-ink-3">

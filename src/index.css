@@ -22,12 +22,16 @@
   --text-3: rgb(60 60 67 / 0.45);
   --line: rgb(0 0 0 / 0.09);
   --fill: rgb(120 120 128 / 0.12);
-  --surface: rgb(246 246 248 / 0.86);
+  /* 창 본체. --surface-opacity · --surface-blur 는 설정 > 창 에서 바꿉니다 */
+  --surface-opacity: 1;
+  --surface-blur: 40px;
+  --surface: rgb(246 246 248 / min(1, calc(0.86 * var(--surface-opacity))));
   --app-bg: #f2f2f7;
 
-  /* glass */
-  --glass-tint: rgb(255 255 255 / 0.22);
-  --glass-tint-strong: rgb(255 255 255 / 0.55);
+  /* glass. --glass-opacity(배경색 진하기 배율)와 --glass-blur 는 설정에서 바꿉니다 (lib/theme.js) */
+  --glass-opacity: 1;
+  --glass-tint: rgb(255 255 255 / min(1, calc(0.22 * var(--glass-opacity))));
+  --glass-tint-strong: rgb(255 255 255 / min(1, calc(0.55 * var(--glass-opacity))));
   --glass-edge: rgb(0 0 0 / 0.06);
   --glass-shadow: rgb(0 0 0 / 0.18);
 
@@ -60,11 +64,11 @@
   --text-3: rgb(235 235 245 / 0.36);
   --line: rgb(255 255 255 / 0.1);
   --fill: rgb(120 120 128 / 0.26);
-  --surface: rgb(30 30 34 / 0.86);
+  --surface: rgb(30 30 34 / min(1, calc(0.86 * var(--surface-opacity))));
   --app-bg: #252527; /* 완전 검정보다 살짝 밝은 회색 */
 
-  --glass-tint: rgb(40 40 46 / 0.32);
-  --glass-tint-strong: rgb(44 44 50 / 0.62);
+  --glass-tint: rgb(40 40 46 / min(1, calc(0.32 * var(--glass-opacity))));
+  --glass-tint-strong: rgb(44 44 50 / min(1, calc(0.62 * var(--glass-opacity))));
   --glass-edge: rgb(255 255 255 / 0.08);
   --glass-shadow: rgb(0 0 0 / 0.5);
 
@@ -162,13 +166,13 @@ textarea,
 
 /* 굴절: Chromium 에서만 backdrop-filter 의 url() 이 그려집니다 */
 html[data-refract="on"] .glass-refract {
-  backdrop-filter: blur(2px) url(#lg-refract) blur(calc(var(--glass-blur) - 6px)) saturate(180%);
+  backdrop-filter: blur(2px) url(#lg-refract) blur(max(0px, calc(var(--glass-blur) - 6px))) saturate(180%);
 }
 
 /* 창/패널 콘텐츠: 거의 불투명한 표면 */
 @utility surface {
   background: var(--surface);
-  backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(var(--surface-blur)) saturate(180%);
 }
 
 /* ───────────── 스크롤바 (macOS 오버레이 느낌) ─────────────
@@ -229,28 +233,7 @@ html[data-refract="on"] .glass-refract {
 }
 
 /* ───────────── 배경화면 ───────────── */
-.wallpaper-sequoia {
-  background:
-    radial-gradient(60% 80% at 15% 20%, #4f7cff 0%, transparent 60%),
-    radial-gradient(50% 60% at 85% 15%, #b05bff 0%, transparent 60%),
-    radial-gradient(70% 70% at 70% 85%, #ff7a45 0%, transparent 60%),
-    radial-gradient(60% 60% at 20% 90%, #13c2c2 0%, transparent 60%),
-    #1b1f3b;
-}
-.wallpaper-sunset {
-  background:
-    radial-gradient(70% 70% at 20% 10%, #ffd166 0%, transparent 60%),
-    radial-gradient(60% 70% at 90% 30%, #ef476f 0%, transparent 60%),
-    radial-gradient(80% 60% at 40% 100%, #7b2cbf 0%, transparent 65%),
-    #f78c6b;
-}
-.wallpaper-aurora {
-  background:
-    radial-gradient(60% 50% at 30% 30%, #2af598 0%, transparent 60%),
-    radial-gradient(60% 60% at 80% 60%, #009efd 0%, transparent 60%),
-    radial-gradient(50% 50% at 20% 85%, #8e2de2 0%, transparent 60%),
-    #071a2c;
-}
+/* Solar 는 시각에 따라 색을 계산해 style 로 칠합니다 (lib/solar.js) */
 .wallpaper-graphite {
   background:
     radial-gradient(70% 70% at 25% 25%, #5b5f6b 0%, transparent 60%),
