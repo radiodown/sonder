@@ -293,6 +293,12 @@ html[data-refract="on"] .glass-refract {
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
+/* 읽기 모드: 조금 크고 넉넉하게 */
+.review-read .review-prose {
+  font-size: 17px;
+  line-height: 1.9;
+  min-height: 0;
+}
 .review-prose > * + * {
   margin-top: 0.75em;
 }

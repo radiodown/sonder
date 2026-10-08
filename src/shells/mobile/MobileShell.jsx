@@ -23,6 +23,7 @@ import { STATS_TABS } from '../../apps/stats/stats'
 import { STATUSES, addReview, deleteReview } from '../../db/db'
 import { NavContext, useNav } from '../../lib/nav'
 import { markAppBack, wasSwipeBack } from '../../lib/swipeBack'
+import { setReviewEditing, useReviewMode } from '../../stores/reviewMode'
 import { confirmDialog } from '../../ui/ConfirmDialog'
 import { Glass } from '../../ui/Glass'
 import { Segmented } from '../../ui/Segmented'
@@ -249,6 +250,7 @@ export function MobileShell() {
   const [addOpen, setAddOpen] = useState(false)
   const [addQuery, setAddQuery] = useState('')
   const [pickOpen, setPickOpen] = useState(false)
+  const reviewEditing = useReviewMode((s) => s.editing)
 
   // 상세 화면 아래에는 마지막으로 보던 탭을 그대로 둡니다
   const [lastTab, setLastTab] = useState('/')
@@ -309,6 +311,8 @@ export function MobileShell() {
               key={`r${reviewMatch.params.rid}`}
               z="z-30"
               onBack={back}
+              // 읽기 모드에선 책 상세처럼 어디서든 밀어서 뒤로 (편집 중엔 글자 선택과 부딪히지 않게 가장자리만)
+              swipeAnywhere={!reviewEditing}
               trailing={
                 <>
                   <ReviewShareMenu reviewId={reviewMatch.params.rid}>
@@ -333,10 +337,10 @@ export function MobileShell() {
                   <Glass
                     as="button"
                     refract
-                    onClick={() => document.activeElement?.blur()}
+                    onClick={() => setReviewEditing(!reviewEditing)}
                     className="flex h-11 items-center rounded-full px-4 text-[15px] font-semibold text-accent"
                   >
-                    완료
+                    {reviewEditing ? '완료' : '편집'}
                   </Glass>
                 </>
               }
@@ -344,7 +348,7 @@ export function MobileShell() {
               <ReviewEditor
                 reviewId={reviewMatch.params.rid}
                 onOpenBook={(id) => navigate(`/book/${id}`)}
-                toolbarClassName="top-[calc(env(safe-area-inset-top)+64px)]"
+                keyboardToolbar
               />
             </PushScreen>
           )}

@@ -20,6 +20,7 @@ import { BookCover } from '../../ui/BookCover'
 import { Glass } from '../../ui/Glass'
 import { formatReviewDate, useReview } from './hooks'
 import { pasteHtmlSource } from './pasteHtml'
+import { setReviewEditing, useReviewMode } from '../../stores/reviewMode'
 
 // 편집기가 열려 있는 독후감 id → 열린 수. StrictMode 의 mount→unmount→mount 에도
 // 빈 독후감이 지워지지 않도록, 닫힌 뒤 한 틱 기다렸다가 아무도 열고 있지 않을 때만 정리합니다.
@@ -129,13 +130,65 @@ function BookChip({ bookId, onOpenBook }) {
   )
 }
 
-function EditorBody({ review, onOpenBook, autoFocus, toolbarClassName }) {
+/**
+ * 화면에 실제로 보이는 영역(visualViewport)의 아래쪽 위치.
+ * iOS 는 키보드가 올라와도 레이아웃 크기가 그대로라, 키보드 위에 붙이려면 이 값을 따라가야 합니다.
+ */
+function useVisibleBottom() {
+  const read = () => {
+    const vv = window.visualViewport
+    if (!vv) return { bottom: window.innerHeight, keyboard: false }
+    // 보이는 높이가 창보다 눈에 띄게 작으면 키보드가 올라온 것
+    return { bottom: vv.offsetTop + vv.height, keyboard: window.innerHeight - vv.height > 80 }
+  }
+  const [state, setState] = useState(read)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => setState(read())
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
+  return state
+}
+
+/** 모바일 서식 툴바: iOS 메모처럼 키보드 바로 위에, 키보드가 없으면 화면 아래(홈 인디케이터 위)에 붙습니다. */
+function KeyboardToolbar({ editor }) {
+  const { bottom, keyboard } = useVisibleBottom()
+  return (
+    <div
+      className="pointer-events-none fixed inset-x-0 z-30 flex justify-center px-3"
+      // 키보드가 없으면 CSS 로 화면 아래(홈 인디케이터 위)에, 있으면 보이는 영역 아래끝(= 키보드 위)에 맞춥니다
+      style={
+        keyboard
+          ? { top: 0, transform: `translateY(calc(${bottom}px - 100% - 8px))` }
+          : { bottom: 'calc(env(safe-area-inset-bottom) + 4px)' }
+      }
+    >
+      <div className="pointer-events-auto max-w-full">
+        <FormatBar editor={editor} />
+      </div>
+    </div>
+  )
+}
+
+function EditorBody({ review, onOpenBook, autoFocus, toolbarClassName, keyboardToolbar }) {
   const [title, setTitle] = useState(review.title)
   const saveTimer = useRef(null)
   const titleRef = useRef(null)
   useDiscardIfEmptyOnClose(review.id)
 
+  // 읽기 / 편집 모드: 내용이 있으면 읽기로, 빈 독후감이면 편집으로 엽니다
+  const [startEditing] = useState(() => isEmptyReview(review))
+  const editing = useReviewMode((s) => s.editing)
+  useEffect(() => setReviewEditing(startEditing), [startEditing])
+
   const editor = useEditor({
+    editable: startEditing,
     extensions: [
       StarterKit.configure({ heading: { levels: [2, 3] }, link: false }),
       Placeholder.configure({ placeholder: '이 책을 읽고 무엇을 느꼈나요?' }),
@@ -177,20 +230,45 @@ function EditorBody({ review, onOpenBook, autoFocus, toolbarClassName }) {
     if (focusOnMount) titleRef.current?.focus()
   }, [focusOnMount])
 
+  // 모드가 바뀌면 편집기도 따라갑니다. 읽기 → 편집으로 바꾸면 글 끝에 커서를 둡니다.
+  const wasEditing = useRef(startEditing)
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return
+    editor.setEditable(editing)
+    if (editing && !wasEditing.current) editor.commands.focus('end')
+    if (!editing) document.activeElement?.blur()
+    wasEditing.current = editing
+  }, [editor, editing])
+
   const count = useEditorState({ editor, selector: ({ editor: e }) => e?.storage.characterCount.characters() ?? 0 })
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className={`pointer-events-none sticky z-10 flex justify-center px-3 ${toolbarClassName}`}>
-        <div className="pointer-events-auto max-w-full">{editor && <FormatBar editor={editor} />}</div>
-      </div>
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 pb-24 pt-5">
+      {editing &&
+        (keyboardToolbar ? (
+          editor && <KeyboardToolbar editor={editor} />
+        ) : (
+          <div className={`pointer-events-none sticky z-10 flex justify-center px-3 ${toolbarClassName}`}>
+            <div className="pointer-events-auto max-w-full">{editor && <FormatBar editor={editor} />}</div>
+          </div>
+        ))}
+      <div
+        className={`mx-auto flex w-full flex-1 flex-col px-6 pb-24 pt-5 ${editing ? 'max-w-2xl' : 'review-read max-w-[38rem]'}`}
+        // 읽다가 두 번 누르면 편집으로
+        onDoubleClick={() => !editing && setReviewEditing(true)}
+      >
         <p className="mb-3 text-center text-xs text-ink-3">
           {formatReviewDate(review.updatedAt, true)} · {count.toLocaleString()}자
         </p>
         <BookChip bookId={review.bookId} onOpenBook={onOpenBook} />
+        {!editing && (
+          <h1 className={`mt-5 text-[28px] font-bold leading-tight ${title.trim() ? '' : 'text-ink-3'}`} data-selectable>
+            {title.trim() || '제목 없음'}
+          </h1>
+        )}
         <input
           ref={titleRef}
+          hidden={!editing}
           value={title}
           onChange={(e) => {
             setTitle(e.target.value)
@@ -209,14 +287,23 @@ function EditorBody({ review, onOpenBook, autoFocus, toolbarClassName }) {
           aria-label="독후감 제목"
           className="mt-4 w-full bg-transparent text-[26px] font-bold leading-tight outline-none placeholder:text-ink-3"
         />
-        <EditorContent editor={editor} className="mt-3 flex-1 cursor-text" onClick={() => editor?.commands.focus()} />
+        <EditorContent
+          editor={editor}
+          className={`flex-1 ${editing ? 'mt-3 cursor-text' : 'mt-5'}`}
+          onClick={() => editing && editor?.commands.focus()}
+          data-selectable={editing ? undefined : true}
+        />
       </div>
     </div>
   )
 }
 
-/** 독후감 편집기. 데스크톱 창과 모바일 화면이 함께 씁니다. 입력하는 대로 저장됩니다. */
-export function ReviewEditor({ reviewId, onOpenBook, autoFocus = true, toolbarClassName = 'top-2' }) {
+/**
+ * 독후감 편집기. 데스크톱 창과 모바일 화면이 함께 씁니다. 입력하는 대로 저장됩니다.
+ * toolbarClassName: 데스크톱처럼 서식 툴바를 위에 붙일 때의 위치
+ * keyboardToolbar: 모바일. 서식 툴바를 키보드 바로 위에 붙입니다
+ */
+export function ReviewEditor({ reviewId, onOpenBook, autoFocus = true, toolbarClassName = 'top-2', keyboardToolbar = false }) {
   const review = useReview(reviewId)
   if (review === undefined) return null
   if (!review) return <div className="p-10 text-center text-sm text-ink-2">독후감을 찾을 수 없습니다</div>
@@ -227,6 +314,7 @@ export function ReviewEditor({ reviewId, onOpenBook, autoFocus = true, toolbarCl
       onOpenBook={onOpenBook}
       autoFocus={autoFocus}
       toolbarClassName={toolbarClassName}
+      keyboardToolbar={keyboardToolbar}
     />
   )
 }

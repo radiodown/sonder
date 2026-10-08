@@ -7,6 +7,7 @@ import { useWindows } from '../../stores/windows'
 import { confirmDialog } from '../../ui/ConfirmDialog'
 import { Glass } from '../../ui/Glass'
 import { ReviewShareMenu } from './ReviewShareMenu'
+import { setReviewEditing, useReviewMode } from '../../stores/reviewMode'
 import { useReviews } from './hooks'
 import { LazyReviewEditor as ReviewEditor } from './LazyReviewEditor'
 import { ReviewRow } from './ReviewList'
@@ -17,6 +18,7 @@ export function ReviewsWindow({ win }) {
   const update = useWindows((s) => s.update)
   const [search, setSearch] = useState('')
   const reviews = useReviews(search)
+  const editing = useReviewMode((s) => s.editing)
   const selectedId = win.props.reviewId
   const select = (reviewId) => update(win.id, { props: { ...win.props, reviewId } })
 
@@ -54,6 +56,14 @@ export function ReviewsWindow({ win }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="window-drag flex h-[52px] shrink-0 items-center justify-end gap-2 px-4">
+          {selectedId && (
+            <button
+              onClick={() => setReviewEditing(!editing)}
+              className="h-7 rounded-full px-3 text-[13px] font-semibold text-accent hover:bg-fill"
+            >
+              {editing ? '완료' : '편집'}
+            </button>
+          )}
           {selectedId && (
             <ReviewShareMenu reviewId={selectedId}>
               <button
