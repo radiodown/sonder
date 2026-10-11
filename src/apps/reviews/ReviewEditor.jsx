@@ -179,6 +179,7 @@ function KeyboardToolbar({ editor }) {
 function EditorBody({ review, onOpenBook, autoFocus, toolbarClassName, keyboardToolbar }) {
   const [title, setTitle] = useState(review.title)
   const saveTimer = useRef(null)
+  const lastSaved = useRef(null) // 마지막으로 저장한(또는 처음 불러온) 본문 HTML
   const titleRef = useRef(null)
   useDiscardIfEmptyOnClose(review.id)
 
@@ -208,9 +209,18 @@ function EditorBody({ review, onOpenBook, autoFocus, toolbarClassName, keyboardT
           },
         }),
     },
+    onCreate: ({ editor: e }) => {
+      lastSaved.current = e.getHTML()
+    },
     onUpdate: ({ editor: e }) => {
+      // 내용이 실제로 바뀌었을 때만 저장합니다. (그냥 열어 보기만 했는데 수정 시각이 바뀌면 목록 순서가 바뀌어요)
+      if (e.getHTML() === lastSaved.current) return
       clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => updateReview(review.id, { content: e.getHTML(), text: e.getText() }), 300)
+      saveTimer.current = setTimeout(() => {
+        saveTimer.current = null
+        lastSaved.current = e.getHTML()
+        updateReview(review.id, { content: lastSaved.current, text: e.getText() })
+      }, 300)
     },
   })
 
@@ -234,7 +244,7 @@ function EditorBody({ review, onOpenBook, autoFocus, toolbarClassName, keyboardT
   const wasEditing = useRef(startEditing)
   useEffect(() => {
     if (!editor || editor.isDestroyed) return
-    editor.setEditable(editing)
+    editor.setEditable(editing, false) // false: '내용 바뀜' 신호를 보내지 않음 (안 그러면 저장이 일어남)
     if (editing && !wasEditing.current) editor.commands.focus('end')
     if (!editing) document.activeElement?.blur()
     wasEditing.current = editing

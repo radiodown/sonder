@@ -1,4 +1,5 @@
 import { BookCover } from '../../ui/BookCover'
+import { bookColors } from '../../ui/bookColors'
 import { formatReviewDate } from './hooks'
 
 /** 메모 앱 같은 독후감 목록 행. selected 는 데스크톱 사이드바에서만 씁니다. */
@@ -44,7 +45,7 @@ function firstQuote(html = '') {
 
 /**
  * 모바일 독후감 목록의 카드. 한 편 한 편을 잡지의 칼럼처럼 보여 줍니다:
- * 책 이름 · 큰 제목 · 인용 한 줄 · 본문 앞부분 · 날짜와 읽는 시간, 오른쪽엔 표지, 바탕엔 표지 색이 은은하게.
+ * 책 이름 · 큰 제목 · 인용 한 줄 · 본문 앞부분 · 날짜와 읽는 시간, 오른쪽엔 표지, 바탕엔 책 색이 은은하게.
  */
 export function ReviewColumn({ review, onClick }) {
   const { book } = review
@@ -53,19 +54,19 @@ export function ReviewColumn({ review, onClick }) {
   if (quote && excerpt.startsWith(quote)) excerpt = excerpt.slice(quote.length).trim()
   const chars = review.text?.replace(/\s/g, '').length ?? 0
   const minutes = Math.max(1, Math.round(chars / 500)) // 한국어 1분에 약 500자
+  const tint = book ? bookColors(book) : null
 
   return (
     <button
       onClick={onClick}
       className="relative isolate flex w-full gap-4 overflow-hidden rounded-[22px] bg-surface p-4 text-left transition-transform active:scale-[0.98] dark:bg-white/[0.07]"
     >
-      {/* 표지 색이 번지는 바탕 */}
-      {book?.cover && (
-        <img
-          src={book.cover}
-          alt=""
+      {/* 책 색이 은은하게 번지는 바탕. (표지 이미지를 흐리게 까는 것보다 훨씬 가벼워서 스크롤이 버벅이지 않습니다) */}
+      {book && (
+        <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 h-full w-full scale-150 object-cover opacity-25 blur-2xl"
+          className="pointer-events-none absolute inset-0 -z-10 opacity-20"
+          style={{ background: `radial-gradient(120% 90% at 100% 0%, ${tint[0]}, transparent 70%), radial-gradient(90% 80% at 0% 100%, ${tint[1]}, transparent 70%)` }}
         />
       )}
 
