@@ -1,9 +1,10 @@
-import { ChartBarIcon, GearSixIcon, MagnifyingGlassIcon, NotePencilIcon } from '@phosphor-icons/react'
+import { BugIcon, ChartBarIcon, GearSixIcon, MagnifyingGlassIcon, NotePencilIcon } from '@phosphor-icons/react'
 import { ShelfGlyph } from '../ui/ShelfGlyph'
 import { AddBook } from './bookshelf/AddBook'
 import { BookDetail } from './bookshelf/BookDetail'
 import { ShelfWindow } from './bookshelf/ShelfWindow'
 import { ReviewsWindow } from './reviews/ReviewsWindow'
+import { RtsWindow } from './rts/RtsWindow'
 import { Settings } from './settings/Settings'
 import { StatsWindow } from './stats/StatsView'
 
@@ -53,6 +54,17 @@ export const APPS = [
     titlebar: 'none',
     dock: true,
     Window: StatsWindow,
+  },
+  {
+    id: 'rts',
+    name: '책벌레 전쟁',
+    Icon: BugIcon,
+    color: '#e8590c',
+    tint: 'from-orange-400 to-red-600',
+    size: { width: 1180, height: 800 },
+    titlebar: 'none',
+    dock: true,
+    Window: RtsWindow,
   },
   {
     id: 'addBook',
