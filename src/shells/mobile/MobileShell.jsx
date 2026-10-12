@@ -13,7 +13,7 @@ import { useShelfPrefs } from '../../apps/bookshelf/shelfPrefs'
 import { ShelfView } from '../../apps/bookshelf/ShelfView'
 import { useBooks } from '../../apps/bookshelf/hooks'
 import { BookPicker } from '../../apps/reviews/BookPicker'
-import { useReviews } from '../../apps/reviews/hooks'
+import { formatReviewDate, useReviews } from '../../apps/reviews/hooks'
 import { LazyReviewEditor as ReviewEditor } from '../../apps/reviews/LazyReviewEditor'
 import { ReviewShareMenu } from '../../apps/reviews/ReviewShareMenu'
 import { ReviewColumn } from '../../apps/reviews/ReviewList'
@@ -21,11 +21,12 @@ import { Settings } from '../../apps/settings/Settings'
 import { StatsContent, YearMenu } from '../../apps/stats/StatsView'
 import { STATS_TABS, hasYearPicker } from '../../apps/stats/stats'
 import { useStats } from '../../apps/stats/useStats'
-import { STATUSES, addReview, deleteReview } from '../../db/db'
+import { STATUSES, addReview, deleteReview, statusLabel } from '../../db/db'
 import { NavContext, useNav } from '../../lib/nav'
 import { markAppBack, wasSwipeBack } from '../../lib/swipeBack'
 import { setReviewEditing, useReviewMode } from '../../stores/reviewMode'
 import { useStatsTab } from '../../stores/statsTab'
+import { BookCover } from '../../ui/BookCover'
 import { confirmDialog } from '../../ui/ConfirmDialog'
 import { Glass } from '../../ui/Glass'
 import { UnderlineTabs } from '../../ui/UnderlineTabs'
@@ -54,13 +55,48 @@ function OnlineSearchRow({ query, onSearch }) {
   )
 }
 
+/** 책장 검색 결과 (화면을 덮는 검색 안). 책장 전체에서 찾고, 고르면 검색을 닫고 그 책을 엽니다. */
+function ShelfSearchResults({ query, close }) {
+  const nav = useNav()
+  const { sort } = useShelfPrefs()
+  const books = useBooks('all', sort, query)
+  const q = query.trim()
+  if (!q) return <p className="py-16 text-center text-sm text-ink-3">책장에서 제목, 저자, 출판사로 찾아요</p>
+  const go = (fn) => {
+    close()
+    fn()
+  }
+  return (
+    <>
+      <OnlineSearchRow query={q} onSearch={() => go(() => nav.openAdd(q))} />
+      {books?.length === 0 ? (
+        <p className="py-10 text-center text-sm text-ink-2">‘{q}’에 맞는 책이 책장에 없어요</p>
+      ) : (
+        <ul className="flex flex-col">
+          {books?.map((b) => (
+            <li key={b.id}>
+              <button onClick={() => go(() => nav.openBook(b.id))} className="flex w-full items-center gap-3 py-2 text-left active:opacity-60">
+                <BookCover book={b} className="w-9 shrink-0" rounded="rounded-[3px]" />
+                <span className="min-w-0 flex-1">
+                  <span className="line-clamp-1 text-[15px] font-medium">{b.title}</span>
+                  <span className="line-clamp-1 text-[13px] text-ink-2">{b.authors?.join(', ')}</span>
+                </span>
+                <span className="shrink-0 text-xs text-ink-3">{statusLabel(b.status)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  )
+}
+
 function ShelfScreen() {
   const nav = useNav()
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const { sort } = useShelfPrefs()
-  const books = useBooks(filter, sort, search)
-  const q = search.trim()
+  const books = useBooks(filter, sort)
   return (
     <Screen
       title="책장"
@@ -70,19 +106,23 @@ function ShelfScreen() {
           <UnderlineTabs options={FILTERS} value={filter} onChange={setFilter} />
         </div>
       }
-      search={{ value: search, onChange: setSearch, placeholder: '제목, 저자, 출판사' }}
+      search={{
+        value: search,
+        onChange: setSearch,
+        placeholder: '제목, 저자, 출판사',
+        results: (close) => <ShelfSearchResults query={search} close={close} />,
+      }}
     >
       <div className="px-5">
-        {q && <OnlineSearchRow query={q} onSearch={() => nav.openAdd(q)} />}
-        {books?.length === 0 && filter === 'all' && !q ? (
+        {books?.length === 0 && filter === 'all' ? (
           <EmptyShelf onAdd={() => nav.openAdd()} />
         ) : books?.length === 0 ? (
-          <p className="py-16 text-center text-sm text-ink-2">{q ? `‘${q}’에 맞는 책이 책장에 없어요` : '책이 없습니다'}</p>
+          <p className="py-16 text-center text-sm text-ink-2">책이 없습니다</p>
         ) : (
           books && (
             <>
               <MobileShelfInfo count={books.length} />
-              {filter === 'want' && !q && <PickNextCard />}
+              {filter === 'want' && <PickNextCard />}
               <ShelfView books={books} onOpen={nav.openBook} platform="mobile" />
             </>
           )
@@ -190,21 +230,55 @@ function PushScreen({ onBack, trailing, z = 'z-20', swipeAnywhere = false, child
   )
 }
 
+/** 독후감 검색 결과 (화면을 덮는 검색 안). 고르면 검색을 닫고 그 독후감을 엽니다. */
+function ReviewSearchResults({ query, close }) {
+  const nav = useNav()
+  const reviews = useReviews(query)
+  const q = query.trim()
+  if (!q) return <p className="py-16 text-center text-sm text-ink-3">독후감에서 제목, 내용, 책 이름으로 찾아요</p>
+  if (reviews?.length === 0) return <p className="py-10 text-center text-sm text-ink-2">‘{q}’에 맞는 독후감이 없어요</p>
+  return (
+    <ul className="flex flex-col">
+      {reviews?.map((r) => (
+        <li key={r.id}>
+          <button
+            onClick={() => {
+              close()
+              nav.openReview(r.id)
+            }}
+            className="flex w-full items-center gap-3 py-2 text-left active:opacity-60"
+          >
+            {r.book && <BookCover book={r.book} className="w-9 shrink-0" rounded="rounded-[3px]" />}
+            <span className="min-w-0 flex-1">
+              <span className="line-clamp-1 text-[15px] font-medium">{r.title?.trim() || '제목 없음'}</span>
+              <span className="line-clamp-1 text-[13px] text-ink-2">{r.book?.title}</span>
+            </span>
+            <span className="shrink-0 text-xs text-ink-3">{formatReviewDate(r.updatedAt)}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function ReviewsScreen() {
   const nav = useNav()
   const [search, setSearch] = useState('')
-  const reviews = useReviews(search)
+  const reviews = useReviews()
   return (
     <Screen
       title="독후감"
       stickyHeader
       header={<UnderlineTabs options={REVIEW_TABS} value="recent" onChange={() => {}} />}
-      search={{ value: search, onChange: setSearch, placeholder: '제목, 내용, 책 이름' }}
+      search={{
+        value: search,
+        onChange: setSearch,
+        placeholder: '제목, 내용, 책 이름',
+        results: (close) => <ReviewSearchResults query={search} close={close} />,
+      }}
     >
       <div className="px-4">
-        {reviews?.length === 0 && search.trim() ? (
-          <p className="py-16 text-center text-sm text-ink-2">‘{search.trim()}’에 맞는 독후감이 없어요</p>
-        ) : reviews?.length === 0 ? (
+        {reviews?.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <NotePencilIcon size={44} className="text-ink-3" />
             <p className="text-sm text-ink-2">

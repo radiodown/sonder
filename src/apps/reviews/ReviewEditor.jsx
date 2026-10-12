@@ -21,6 +21,7 @@ import { Glass } from '../../ui/Glass'
 import { formatReviewDate, useReview } from './hooks'
 import { pasteHtmlSource } from './pasteHtml'
 import { setReviewEditing, useReviewMode } from '../../stores/reviewMode'
+import { useVisibleBottom } from '../../lib/visibleBottom'
 
 // 편집기가 열려 있는 독후감 id → 열린 수. StrictMode 의 mount→unmount→mount 에도
 // 빈 독후감이 지워지지 않도록, 닫힌 뒤 한 틱 기다렸다가 아무도 열고 있지 않을 때만 정리합니다.
@@ -128,32 +129,6 @@ function BookChip({ bookId, onOpenBook }) {
       </span>
     </button>
   )
-}
-
-/**
- * 화면에 실제로 보이는 영역(visualViewport)의 아래쪽 위치.
- * iOS 는 키보드가 올라와도 레이아웃 크기가 그대로라, 키보드 위에 붙이려면 이 값을 따라가야 합니다.
- */
-function useVisibleBottom() {
-  const read = () => {
-    const vv = window.visualViewport
-    if (!vv) return { bottom: window.innerHeight, keyboard: false }
-    // 보이는 높이가 창보다 눈에 띄게 작으면 키보드가 올라온 것
-    return { bottom: vv.offsetTop + vv.height, keyboard: window.innerHeight - vv.height > 80 }
-  }
-  const [state, setState] = useState(read)
-  useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const update = () => setState(read())
-    vv.addEventListener('resize', update)
-    vv.addEventListener('scroll', update)
-    return () => {
-      vv.removeEventListener('resize', update)
-      vv.removeEventListener('scroll', update)
-    }
-  }, [])
-  return state
 }
 
 /** 모바일 서식 툴바: iOS 메모처럼 키보드 바로 위에, 키보드가 없으면 화면 아래(홈 인디케이터 위)에 붙습니다. */
