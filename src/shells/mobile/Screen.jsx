@@ -147,8 +147,11 @@ export function Screen({ title, header, trailing, search, stickyHeader = false, 
         ref={ref}
         {...reveal.handlers}
         aria-label={title}
-        className="pt-safe h-full overflow-y-auto overscroll-contain pb-36"
+        className="h-full overflow-y-auto overscroll-contain pb-36"
       >
+        {/* 상태 막대 자리. 스크롤 영역에 padding 으로 주면 iOS Safari 는 sticky 위치를 그 안쪽 기준으로 잡아
+            top 이 두 번 더해집니다 (크롬과 다름). 빈 칸으로 두면 두 엔진이 똑같이 그립니다 */}
+        <div className="pt-safe" />
         <div className={stickyHeader ? 'sticky top-[env(safe-area-inset-top)] z-20 mb-2 h-14' : 'relative'}>
           <div className={`flex h-full items-center gap-3 pl-5 pr-4 ${stickyHeader ? '' : 'min-h-4 pb-3 pt-2'}`}>
             <div className="min-w-0 flex-1">{header}</div>
