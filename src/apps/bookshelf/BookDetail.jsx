@@ -1,8 +1,8 @@
-import { NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
+import { NotePencilIcon, TrashIcon, XIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { useNav } from '../../lib/nav'
 import { toast } from 'sonner'
-import { STATUSES, dayKey, deleteBook, updateBook } from '../../db/db'
+import { STATUSES, cancelReread, dayKey, deleteBook, deleteRead, updateBook } from '../../db/db'
 import { BookCover } from '../../ui/BookCover'
 import { confirmDialog } from '../../ui/ConfirmDialog'
 import { Segmented } from '../../ui/Segmented'
@@ -39,6 +39,41 @@ function DateRow({ label, value, onChange, max }) {
         className="rounded-md bg-transparent text-right font-medium outline-none [color-scheme:inherit] focus:ring-2 focus:ring-accent/50"
       />
     </label>
+  )
+}
+
+const fmtDay = (ts) => (ts ? new Date(ts).toLocaleDateString('ko-KR') : '?')
+
+/** 지난 회독 목록. 다 읽음 → 읽는 중으로 바꾸면 그 회독이 여기로 옵니다. */
+function PastReads({ book }) {
+  if (!book.reads?.length) return null
+  const remove = async (i) => {
+    const ok = await confirmDialog({
+      title: `${i + 1}회독 기록을 지울까요?`,
+      message: '통계와 캘린더에서도 빠집니다.',
+      confirmLabel: '지우기',
+      destructive: true,
+    })
+    if (ok) deleteRead(book.id, i)
+  }
+  return (
+    <section>
+      <h2 className="mb-2 text-sm font-semibold text-ink-2">지난 독서</h2>
+      <div className="divide-y divide-line rounded-2xl bg-fill/60 px-4">
+        {book.reads.map((r, i) => (
+          <div key={i} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+            <span className="text-ink-2">{i + 1}회독</span>
+            <span className="ml-auto font-medium tabular-nums">
+              {r.startedAt ? `${fmtDay(r.startedAt)} – ` : ''}
+              {fmtDay(r.finishedAt)}
+            </span>
+            <button onClick={() => remove(i)} aria-label={`${i + 1}회독 기록 지우기`} className="text-ink-3 active:opacity-60">
+              <XIcon size={14} weight="bold" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -132,6 +167,17 @@ export function BookDetail({ bookId, onDeleted }) {
     onDeleted?.()
   }
 
+  const changeStatus = async (status) => {
+    const reread = book.status === 'done' && status === 'reading' && book.finishedAt
+    await updateBook(book.id, { status })
+    if (reread)
+      toast(`${(book.reads?.length ?? 0) + 2}회독을 시작했어요`, {
+        description: '지난 완독 기록은 그대로 남겨 둡니다',
+        action: { label: '되돌리기', onClick: () => cancelReread(book.id) },
+      })
+  }
+  const round = (book.reads?.length ?? 0) + 1 // 지금 몇 번째 읽는지
+
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6 px-5 pb-10">
       {/* 표지 색이 화면 전체에 번지는 배경. 스크롤해도 제자리에 있고, 아래로 갈수록 옅어집니다.
@@ -150,13 +196,16 @@ export function BookDetail({ bookId, onDeleted }) {
           {book.title}
         </h1>
         <p className="mt-1 text-ink-2">{byline(book)}</p>
+        {round > 1 && book.status !== 'want' && (
+          <p className="mt-1.5 text-xs font-semibold text-accent">{book.status === 'done' ? `${round}번 읽은 책` : `${round}회독 중`}</p>
+        )}
       </div>
 
       <div className="flex flex-col items-center gap-4">
         <Segmented
           options={STATUSES.map((s) => ({ value: s.id, label: s.label }))}
           value={book.status}
-          onChange={(status) => updateBook(book.id, { status })}
+          onChange={changeStatus}
         />
         <StarRating value={book.rating} onChange={(rating) => updateBook(book.id, { rating })} />
       </div>
@@ -174,6 +223,8 @@ export function BookDetail({ bookId, onDeleted }) {
           <DateRow label="다 읽은 날" value={book.finishedAt} onChange={(finishedAt) => updateBook(book.id, { finishedAt })} />
         )}
       </section>
+
+      <PastReads book={book} />
 
       <BookReviews bookId={book.id} />
 

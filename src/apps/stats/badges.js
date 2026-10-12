@@ -1,9 +1,9 @@
-import { dayKey, isEmptyReview } from '../../db/db'
+import { completedReads, dayKey, isEmptyReview } from '../../db/db'
 import { sunTimes } from '../../lib/solar'
 import { READING_TYPES } from './stats'
 
 /**
- * 업적 배지 64개. 책·독후감·활동 기록에서 그때그때 계산합니다 (따로 저장하는 건 "언제 처음 받았나" 뿐).
+ * 업적 배지 66개. 책·독후감·활동 기록에서 그때그때 계산합니다 (따로 저장하는 건 "언제 처음 받았나" 뿐).
  * check(ctx) → { done, progress? } · progress 는 아직 못 받은 배지에 보여 줄 "3 / 5" 같은 글
  * id 는 받은 기록의 열쇠라서 한 번 정하면 바꾸지 않습니다.
  */
@@ -67,7 +67,7 @@ const tiers = (group, list, value) =>
 // ───────────── 배지 ─────────────
 
 export const BADGES = [
-  // 완독 (8)
+  // 완독 (10)
   ...tiers(
     'finish',
     [
@@ -82,6 +82,22 @@ export const BADGES = [
     ],
     (c) => c.finished.length,
   ),
+  {
+    id: 'reread',
+    group: 'finish',
+    emoji: '🔁',
+    title: '다시 펼친 책',
+    desc: '다 읽은 책을 한 번 더 끝까지 읽었어요',
+    check: (c) => yes(c.rereadMax >= 2),
+  },
+  {
+    id: 'reread-3',
+    group: 'finish',
+    emoji: '🌀',
+    title: '세 번째 완독',
+    desc: '한 책을 세 번 끝까지 읽었어요',
+    check: (c) => count(c.rereadMax, 3),
+  },
 
   // 책장 (7)
   ...tiers(
@@ -472,9 +488,15 @@ export const BADGES = [
 
 /** 배지마다 { ...배지, done, progress } */
 export function evaluateBadges({ books, reviews, activity, goals = {} }) {
-  const finished = books.filter((b) => b.status === 'done' && b.finishedAt)
+  // 한 번이라도 다 읽은 책. 날짜는 마지막 완독 기준 (다시 읽는 중이어도 다 읽은 책으로 셉니다)
+  const finished = books.flatMap((b) => {
+    const last = completedReads(b).at(-1)
+    return last ? [{ ...b, ...last }] : []
+  })
   const reading = activity.filter((a) => READING_TYPES.includes(a.type))
-  const finishedByYear = (year) => finished.filter((b) => new Date(b.finishedAt).getFullYear() === Number(year)).length
+  // 목표는 완독 횟수 기준 (다시 읽은 것도 그해 한 권)
+  const finishedByYear = (year) =>
+    books.flatMap(completedReads).filter((r) => new Date(r.finishedAt).getFullYear() === Number(year)).length
 
   const ctx = {
     books,
@@ -494,6 +516,7 @@ export function evaluateBadges({ books, reviews, activity, goals = {} }) {
     translated: finished.filter((b) => b.translators?.length).length,
     pubYears: finished.map(pubYear).filter(Boolean),
     goals,
+    rereadMax: Math.max(0, ...books.map((b) => completedReads(b).length)),
     // 목표를 정한 해 중 가장 많이 채운 비율
     goalRatio: Math.max(0, ...Object.entries(goals).filter(([, g]) => g > 0).map(([y, g]) => finishedByYear(y) / g)),
   }

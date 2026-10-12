@@ -1,4 +1,4 @@
-import { dayKey } from '../../db/db'
+import { completedReads, dayKey } from '../../db/db'
 
 const DAY = 86_400_000
 // 히트맵에 세는 활동 (책 추가는 독서가 아니라서 뺍니다)
@@ -89,9 +89,11 @@ function topCounts(values, n = 5) {
 export function computeStats({ books, reviews, activity, year, now = Date.now() }) {
   const thisYear = yearOf(now)
   const reading = activity.filter((a) => READING_TYPES.includes(a.type))
+  // 완독 한 번마다 하나 (다시 읽은 책은 읽은 횟수만큼)
+  const completions = books.flatMap((b) => completedReads(b).map((r) => ({ ...b, ...r })))
 
   // 연도 목록 (기록이 있는 해 + 올해)
-  const years = [...new Set([thisYear, ...reading.map((a) => yearOf(a.at)), ...books.map((b) => b.finishedAt && yearOf(b.finishedAt)).filter(Boolean)])].sort(
+  const years = [...new Set([thisYear, ...reading.map((a) => yearOf(a.at)), ...completions.map((c) => yearOf(c.finishedAt))])].sort(
     (a, b) => b - a,
   )
 
@@ -106,8 +108,8 @@ export function computeStats({ books, reviews, activity, year, now = Date.now() 
   }
   const activeDays = [...byDay.keys()].sort()
 
-  // 완독
-  const finished = books.filter((b) => b.status === 'done' && inYear(b.finishedAt, year))
+  // 완독 (다시 읽은 것도 그해의 완독으로 셉니다)
+  const finished = completions.filter((c) => inYear(c.finishedAt, year))
   const monthly = Array.from({ length: 12 }, (_, m) => finished.filter((b) => new Date(b.finishedAt).getMonth() === m).length)
   const withPages = finished.filter((b) => b.pageCount > 0)
   const durations = finished

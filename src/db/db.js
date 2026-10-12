@@ -17,6 +17,8 @@ db.version(2).stores({
 // activity: { id, day: 'YYYY-MM-DD'(현지 날짜), at, type, bookId, ref? }
 //   type: 'add'(책 추가) | 'start'(읽기 시작) | 'finish'(완독) | 'review'(독후감 작성) | 'memo'(메모 작성)
 // books 에 startedAt / finishedAt 이 생깁니다. start/finish 기록은 이 두 날짜에서 만들어집니다.
+// 다시 읽으면 지난 회독은 books.reads: [{ startedAt, finishedAt }] (오래된 순)로 옮겨집니다.
+// startedAt / finishedAt 은 언제나 "지금(마지막) 회독"입니다. (색인이 없는 칸이라 스키마는 그대로)
 db.version(3)
   .stores({
     books: '++id, isbn, title, status, createdAt, updatedAt',
@@ -36,6 +38,52 @@ db.version(3)
     await tx.table('activity').bulkAdd(deriveActivity(books, reviews))
   })
 
+// v4: 잠깐 있었던 인용구 기능. 메모를 quotes 테이블로 옮겼었습니다.
+db.version(4).stores({
+  books: '++id, isbn, title, status, createdAt, updatedAt',
+  reviews: '++id, bookId, updatedAt',
+  activity: '++id, day, type, bookId',
+  quotes: '++id, bookId, createdAt',
+})
+
+// v5: 인용구를 없애고 메모로 되돌립니다. 인용구는 그 책의 메모 뒤에 이어 붙이고, 인용구 기록은 메모 기록으로.
+// (v3 에서 바로 올라오는 기기는 quotes 가 비어 있어서 바뀌는 것이 없습니다)
+db.version(5)
+  .stores({
+    books: '++id, isbn, title, status, createdAt, updatedAt',
+    reviews: '++id, bookId, updatedAt',
+    activity: '++id, day, type, bookId',
+    quotes: null,
+  })
+  .upgrade(async (tx) => {
+    const quotes = await tx.table('quotes').toArray()
+    const memos = quotesToMemos(quotes)
+    await tx
+      .table('books')
+      .toCollection()
+      .modify((b) => {
+        if (memos.has(b.id)) b.memo = [b.memo?.trim(), memos.get(b.id)].filter(Boolean).join('\n\n')
+      })
+    await tx
+      .table('activity')
+      .where('type')
+      .equals('quote')
+      .modify((a) => {
+        a.type = 'memo'
+        a.ref = `memo-${a.bookId}`
+      })
+  })
+
+/** 인용구들 → 책 id 별 메모 글 (적은 순서, 쪽이 있으면 "(p. 12)") */
+function quotesToMemos(quotes) {
+  const memos = new Map()
+  for (const q of [...quotes].sort((a, b) => a.createdAt - b.createdAt)) {
+    const text = `${q.text}${q.page ? ` (p. ${q.page})` : ''}`
+    memos.set(q.bookId, memos.has(q.bookId) ? `${memos.get(q.bookId)}\n\n${text}` : text)
+  }
+  return memos
+}
+
 export const STATUSES = [
   { id: 'want', label: '읽고 싶은' },
   { id: 'reading', label: '읽는 중' },
@@ -45,6 +93,17 @@ export const STATUSES = [
 export function statusLabel(id) {
   return STATUSES.find((s) => s.id === id)?.label ?? ''
 }
+
+/** 다 읽은 회독들: 지난 회독(reads) + 지금 회독(다 읽음일 때). [{ startedAt, finishedAt }] 오래된 순 */
+export function completedReads(book) {
+  const past = book.reads ?? []
+  return book.status === 'done' && book.finishedAt
+    ? [...past, { startedAt: book.startedAt ?? null, finishedAt: book.finishedAt }]
+    : past
+}
+
+/** 시작·완독 기록을 만들 회독들 (다 읽지 않은 지금 회독도 시작일은 남깁니다) */
+const allReads = (book) => [...(book.reads ?? []), { startedAt: book.startedAt, finishedAt: book.finishedAt }]
 
 // ───────────── 활동 기록 ─────────────
 
@@ -61,8 +120,10 @@ function deriveActivity(books, reviews) {
   const out = []
   for (const b of books) {
     out.push(event('add', b.id, b.createdAt))
-    if (b.startedAt) out.push(event('start', b.id, b.startedAt))
-    if (b.finishedAt) out.push(event('finish', b.id, b.finishedAt))
+    for (const r of allReads(b)) {
+      if (r.startedAt) out.push(event('start', b.id, r.startedAt))
+      if (r.finishedAt) out.push(event('finish', b.id, r.finishedAt))
+    }
   }
   for (const r of reviews) {
     if (!isEmptyReview(r)) {
@@ -73,15 +134,17 @@ function deriveActivity(books, reviews) {
   return out
 }
 
-/** 책의 시작·완독 기록을 startedAt / finishedAt 에 맞춰 다시 씁니다. */
+/** 책의 시작·완독 기록을 회독들(reads + startedAt / finishedAt)에 맞춰 다시 씁니다. */
 async function syncDateEvents(book) {
   await db.activity
     .where('bookId')
     .equals(book.id)
     .filter((a) => a.type === 'start' || a.type === 'finish')
     .delete()
-  if (book.startedAt) await db.activity.add(event('start', book.id, book.startedAt))
-  if (book.finishedAt) await db.activity.add(event('finish', book.id, book.finishedAt))
+  for (const r of allReads(book)) {
+    if (r.startedAt) await db.activity.add(event('start', book.id, r.startedAt))
+    if (r.finishedAt) await db.activity.add(event('finish', book.id, r.finishedAt))
+  }
 }
 
 /** 같은 날 같은 대상(ref)에 대한 기록은 한 번만 남깁니다 (독후감·메모를 여러 번 고쳐도 하루 1회). */
@@ -123,9 +186,10 @@ export async function addBook(book) {
 
 /**
  * 책 정보를 고칩니다. 상태가 바뀌면 시작일·완독일을 함께 정리합니다.
- * - 읽는 중: 시작일이 없으면 오늘 (다시 읽기면 완독일은 지움)
+ * - 다 읽음 → 읽는 중: 다시 읽기. 지난 회독을 reads 로 옮기고 시작일 = 오늘 (cancelReread 로 되돌림)
+ * - 읽는 중: 시작일이 없으면 오늘
  * - 다 읽음: 완독일 = 오늘
- * - 읽고 싶은: 시작일·완독일 지움
+ * - 읽고 싶은: 지금 회독의 시작일·완독일 지움 (지난 회독은 남김)
  */
 export function updateBook(id, patch) {
   return db.transaction('rw', db.books, db.activity, async () => {
@@ -134,7 +198,11 @@ export function updateBook(id, patch) {
     const now = Date.now()
     const next = { ...patch, updatedAt: now }
     if (patch.status && patch.status !== book.status) {
-      if (patch.status === 'reading') {
+      if (patch.status === 'reading' && book.status === 'done' && book.finishedAt) {
+        next.reads = [...(book.reads ?? []), { startedAt: book.startedAt ?? null, finishedAt: book.finishedAt }]
+        next.startedAt = now
+        next.finishedAt = null
+      } else if (patch.status === 'reading') {
         next.startedAt = book.startedAt ?? now
         next.finishedAt = null
       } else if (patch.status === 'done') {
@@ -147,6 +215,29 @@ export function updateBook(id, patch) {
     await db.books.update(id, next)
     if ('status' in patch || 'startedAt' in patch || 'finishedAt' in patch) await syncDateEvents({ ...book, ...next })
     if ('memo' in patch && patch.memo?.trim() && patch.memo !== book.memo) await logOncePerDay('memo', id, `memo-${id}`)
+  })
+}
+
+/** 방금 시작한 다시 읽기를 취소합니다: 마지막 지난 회독을 지금 회독으로 되돌려 다 읽음으로. */
+export function cancelReread(id) {
+  return db.transaction('rw', db.books, db.activity, async () => {
+    const book = await db.books.get(id)
+    const last = book?.reads?.at(-1)
+    if (!last) return
+    const next = { reads: book.reads.slice(0, -1), status: 'done', ...last, updatedAt: Date.now() }
+    await db.books.update(id, next)
+    await syncDateEvents({ ...book, ...next })
+  })
+}
+
+/** 지난 회독 하나를 지웁니다 (index: reads 안의 위치) */
+export function deleteRead(id, index) {
+  return db.transaction('rw', db.books, db.activity, async () => {
+    const book = await db.books.get(id)
+    if (!book?.reads?.[index]) return
+    const next = { reads: book.reads.filter((_, i) => i !== index), updatedAt: Date.now() }
+    await db.books.update(id, next)
+    await syncDateEvents({ ...book, ...next })
   })
 }
 
@@ -202,9 +293,15 @@ export async function exportBooks() {
 function parseBackup(json) {
   const data = JSON.parse(json)
   if (!Array.isArray(data.books)) throw new Error('올바른 백업 파일이 아닙니다')
-  const books = data.books
   const reviews = Array.isArray(data.reviews) ? data.reviews : []
-  const activity = Array.isArray(data.activity) ? data.activity : deriveActivity(books, reviews)
+  // 잠깐 있었던 version 4 백업의 인용구는 메모로 되돌립니다
+  const memos = quotesToMemos(Array.isArray(data.quotes) ? data.quotes : [])
+  const books = data.books.map((b) =>
+    memos.has(b.id) ? { ...b, memo: [b.memo?.trim(), memos.get(b.id)].filter(Boolean).join('\n\n') } : b,
+  )
+  const activity = (Array.isArray(data.activity) ? data.activity : deriveActivity(books, reviews)).map((a) =>
+    a.type === 'quote' ? { ...a, type: 'memo', ref: `memo-${a.bookId}` } : a,
+  )
   return { books, reviews, activity }
 }
 

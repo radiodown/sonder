@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { motion } from 'motion/react'
-import { db } from '../../db/db'
+import { completedReads, db } from '../../db/db'
 import { hashString } from '../../ui/bookColors'
 import { Card } from './charts'
 
@@ -33,10 +33,12 @@ const STACK_H = 200 // 그림 높이(px)
 
 /** 지금까지 다 읽은 책을 쌓으면 얼마나 될까: 책이 하나씩 떨어져 쌓이는 그림 + 비교 */
 export function BookStackCard() {
-  const books = useLiveQuery(() => db.books.where('status').equals('done').toArray(), [], null)
+  // 다시 읽는 중인 책도 다 읽은 책입니다 (한 권은 한 번만 쌓음)
+  const books = useLiveQuery(() => db.books.filter((b) => completedReads(b).length > 0).toArray(), [], null)
   if (!books) return null
 
-  const sorted = [...books].sort((a, b) => (a.finishedAt ?? 0) - (b.finishedAt ?? 0)) // 먼저 읽은 책이 아래
+  const firstDone = (b) => completedReads(b)[0].finishedAt
+  const sorted = [...books].sort((a, b) => firstDone(a) - firstDone(b)) // 먼저 읽은 책이 아래
   const totalMm = sorted.reduce((s, b) => s + thicknessMm(b), 0)
   const cm = totalMm / 10
   const passed = [...LANDMARKS].reverse().find((l) => cm >= l.cm)
