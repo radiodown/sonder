@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
-import { Toaster } from 'sonner'
 import { addReview } from '../../db/db'
 import { NavContext } from '../../lib/nav'
 import { solarBackground, useSolarBackground } from '../../lib/solar'
@@ -13,6 +12,7 @@ import { Dock } from './Dock'
 import { MenuBar } from './MenuBar'
 import { Spotlight } from './Spotlight'
 import { Window } from './Window'
+import { GlassToaster } from '../../ui/GlassToaster'
 
 /** Solar 타임랩스(메뉴바 시계 길게 누르기) 동안 배경화면 위에 덮는 층. 이것만 다시 그려서 창들은 영향받지 않습니다. */
 function TimelapseLayer() {
@@ -92,7 +92,7 @@ export function DesktopShell() {
         <Spotlight open={spotlight} onOpenChange={setSpotlight} />
         <BookPickerDialog open={picker} onOpenChange={setPicker} onPick={nav.writeFor} />
         <NextBookPicker />
-        <Toaster position="top-right" offset={40} theme="system" />
+        <GlassToaster position="top-right" offset={40} />
       </div>
     </NavContext.Provider>
   )

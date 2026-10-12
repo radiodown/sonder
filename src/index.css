@@ -152,6 +152,75 @@ textarea,
   }
 }
 
+/* 토스트 (ui/GlassToaster.jsx). 글 위에 뜨니 블러는 설정값보다 조금 세게 */
+.toast-glass {
+  width: var(--width);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 12px 16px;
+  border-radius: 22px;
+  color: var(--text);
+  font-size: 14px;
+  backdrop-filter: blur(max(var(--glass-blur), 18px)) saturate(180%);
+  -webkit-backdrop-filter: blur(max(var(--glass-blur), 18px)) saturate(180%);
+  & [data-content] {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  &:not(:has([data-button])) {
+    padding-right: 16px;
+  }
+}
+.toast-title {
+  font-weight: 600;
+  line-height: 1.35;
+}
+.toast-description {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--text-2);
+}
+.toast-icon {
+  display: flex;
+  flex-shrink: 0;
+  & svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+[data-type="success"] .toast-icon {
+  color: #34c759;
+}
+[data-type="error"] .toast-icon {
+  color: #ff3b30;
+}
+.toast-action,
+.toast-cancel {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  &:active {
+    opacity: 0.6;
+  }
+}
+.toast-action {
+  background: var(--accent);
+  color: #fff;
+}
+.toast-cancel {
+  background: rgb(120 120 128 / 0.16);
+  color: var(--text);
+}
+
 /* 화면 가장자리에 붙는 바(메뉴바 등): 테두리 없음 */
 @utility glass-flat {
   box-shadow: none;
@@ -361,9 +430,13 @@ html[data-refract="on"] .glass-refract {
 
 /* 하단 탭바 위치.
    Safari 안에서는 홈 인디케이터 영역 위에 띄우고,
-   홈 화면 앱(주소창 없음)에서는 iOS 26 기본 앱처럼 홈 인디케이터 바로 위까지 내립니다. */
+   홈 화면 앱(주소창 없음)에서는 iOS 26 기본 앱처럼 홈 인디케이터 바로 위까지 내립니다.
+   --tabbar-pad 는 토스트 위치(MobileShell)도 씁니다. */
+:root {
+  --tabbar-pad: env(safe-area-inset-bottom);
+}
 .tabbar-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: var(--tabbar-pad);
 }
 /* iOS 26.0 홈 화면 앱 버그: 뷰포트 높이를 Safari 주소창이 있는 것처럼 계산해서
    position: fixed; bottom: 0 이 화면 맨 아래에 닿지 않습니다. 문서를 상단 안전 영역만큼 늘려 바로잡습니다.
@@ -371,8 +444,8 @@ html[data-refract="on"] .glass-refract {
 html[data-standalone] {
   min-height: calc(100% + env(safe-area-inset-top));
 }
-[data-standalone] .tabbar-bottom {
-  padding-bottom: max(calc(env(safe-area-inset-bottom) - 20px), 0px);
+html[data-standalone] {
+  --tabbar-pad: max(calc(env(safe-area-inset-bottom) - 20px), 0px);
 }
 
 /* "Library에 관하여" 크레딧: 목록 두 벌을 이어 붙여 절반만큼 올리면 끊김 없이 반복됩니다 */

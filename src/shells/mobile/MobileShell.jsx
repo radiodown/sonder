@@ -2,7 +2,6 @@ import { ArrowUpRightIcon, CaretLeftIcon, ExportIcon, GlobeIcon, NotePencilIcon,
 import { AnimatePresence, animate, motion, useDragControls, useMotionValue } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { useLocation, useMatch, useNavigate } from 'react-router'
-import { Toaster } from 'sonner'
 import { Drawer } from 'vaul'
 import { AddBook } from '../../apps/bookshelf/AddBook'
 import { BookDetail } from '../../apps/bookshelf/BookDetail'
@@ -32,6 +31,7 @@ import { Glass } from '../../ui/Glass'
 import { UnderlineTabs } from '../../ui/UnderlineTabs'
 import { Screen } from './Screen'
 import { TabBar } from './TabBar'
+import { GlassToaster } from '../../ui/GlassToaster'
 
 const FILTERS = [{ value: 'all', label: '전체' }, ...STATUSES.map((s) => ({ value: s.id, label: s.label }))]
 
@@ -340,6 +340,10 @@ export function MobileShell() {
   if (isTab && location.pathname !== lastTab) setLastTab(location.pathname)
   const tab = isTab ? location.pathname : lastTab
   const TabScreen = SCREENS[tab]
+  const tabBarHidden = !!bookMatch || !!reviewMatch
+  const toastOffset = {
+    bottom: tabBarHidden ? 'calc(env(safe-area-inset-bottom) + 8px)' : 'calc(var(--tabbar-pad) + 70px)',
+  }
 
   // 브라우저 스와이프 뒤로가기였다면 닫힘 애니메이션을 건너뜁니다
   const swiped = wasSwipeBack()
@@ -437,7 +441,7 @@ export function MobileShell() {
         </AnimatePresence>
         <TabBar
           current={tab}
-          hidden={!!bookMatch || !!reviewMatch}
+          hidden={tabBarHidden}
           onTab={(path) => navigate(path, { replace: true })}
           action={
             tab === '/'
@@ -462,7 +466,8 @@ export function MobileShell() {
       </Sheet>
 
       <NextBookPicker mobile />
-      <Toaster position="top-center" theme="system" />
+      {/* 탭바(54px + 아래 여백 8px) 위, 탭바가 없는 화면에서는 홈 인디케이터 위에 띄웁니다 */}
+      <GlassToaster position="bottom-center" offset={toastOffset} mobileOffset={toastOffset} />
     </NavContext.Provider>
   )
 }
