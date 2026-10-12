@@ -10,6 +10,9 @@ export const STATS_TABS = [
   { value: 'badges', label: '배지' },
 ]
 
+/** 연도 고르기는 '요약'과 '분석'에만 있습니다 */
+export const hasYearPicker = (tab, s) => (tab === 'summary' || tab === 'insights') && s.years.length > 1
+
 export const READING_TYPES = ['start', 'finish', 'review', 'memo']
 export const TYPE_LABELS = { start: '읽기 시작', finish: '완독', review: '독후감', memo: '메모' }
 

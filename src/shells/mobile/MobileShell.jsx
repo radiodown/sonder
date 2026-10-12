@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon, CaretLeftIcon, ExportIcon, GlobeIcon, NotePencilIcon, TrashIcon } from '@phosphor-icons/react'
+import { ArrowUpRightIcon, CaretLeftIcon, ExportIcon, GlobeIcon, NotePencilIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react'
 import { AnimatePresence, animate, motion, useDragControls, useMotionValue } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { useLocation, useMatch, useNavigate } from 'react-router'
@@ -8,7 +8,7 @@ import { AddBook } from '../../apps/bookshelf/AddBook'
 import { BookDetail } from '../../apps/bookshelf/BookDetail'
 import { EmptyShelf } from '../../apps/bookshelf/BookGrid'
 import { NextBookPicker } from '../../apps/bookshelf/NextBookPicker'
-import { MobileShelfMenu } from '../../apps/bookshelf/ShelfOptions'
+import { MobileShelfInfo, PickNextCard } from '../../apps/bookshelf/ShelfOptions'
 import { useShelfPrefs } from '../../apps/bookshelf/shelfPrefs'
 import { ShelfView } from '../../apps/bookshelf/ShelfView'
 import { useBooks } from '../../apps/bookshelf/hooks'
@@ -18,19 +18,24 @@ import { LazyReviewEditor as ReviewEditor } from '../../apps/reviews/LazyReviewE
 import { ReviewShareMenu } from '../../apps/reviews/ReviewShareMenu'
 import { ReviewColumn } from '../../apps/reviews/ReviewList'
 import { Settings } from '../../apps/settings/Settings'
-import { StatsView } from '../../apps/stats/StatsView'
-import { STATS_TABS } from '../../apps/stats/stats'
+import { StatsContent, YearMenu } from '../../apps/stats/StatsView'
+import { STATS_TABS, hasYearPicker } from '../../apps/stats/stats'
+import { useStats } from '../../apps/stats/useStats'
 import { STATUSES, addReview, deleteReview } from '../../db/db'
 import { NavContext, useNav } from '../../lib/nav'
 import { markAppBack, wasSwipeBack } from '../../lib/swipeBack'
 import { setReviewEditing, useReviewMode } from '../../stores/reviewMode'
+import { useStatsTab } from '../../stores/statsTab'
 import { confirmDialog } from '../../ui/ConfirmDialog'
 import { Glass } from '../../ui/Glass'
-import { Segmented } from '../../ui/Segmented'
+import { UnderlineTabs } from '../../ui/UnderlineTabs'
 import { Screen } from './Screen'
 import { TabBar } from './TabBar'
 
 const FILTERS = [{ value: 'all', label: '전체' }, ...STATUSES.map((s) => ({ value: s.id, label: s.label }))]
+
+// 독후감 보기. 지금은 '최근' 하나 (나중에 '밑줄' 같은 보기를 더할 자리)
+const REVIEW_TABS = [{ value: 'recent', label: '최근' }]
 
 /** 검색어가 있을 때 맨 위에 보이는 "온라인에서 찾기" 줄 */
 function OnlineSearchRow({ query, onSearch }) {
@@ -59,12 +64,12 @@ function ShelfScreen() {
   return (
     <Screen
       title="책장"
+      stickyHeader
       header={
         <div className="scrollbar-none -my-1 overflow-x-auto py-1">
-          <Segmented options={FILTERS} value={filter} onChange={setFilter} size="sm" />
+          <UnderlineTabs options={FILTERS} value={filter} onChange={setFilter} />
         </div>
       }
-      trailing={<MobileShelfMenu />}
       search={{ value: search, onChange: setSearch, placeholder: '제목, 저자, 출판사' }}
     >
       <div className="px-5">
@@ -74,7 +79,13 @@ function ShelfScreen() {
         ) : books?.length === 0 ? (
           <p className="py-16 text-center text-sm text-ink-2">{q ? `‘${q}’에 맞는 책이 책장에 없어요` : '책이 없습니다'}</p>
         ) : (
-          books && <ShelfView books={books} onOpen={nav.openBook} platform="mobile" />
+          books && (
+            <>
+              <MobileShelfInfo count={books.length} />
+              {filter === 'want' && !q && <PickNextCard />}
+              <ShelfView books={books} onOpen={nav.openBook} platform="mobile" />
+            </>
+          )
         )}
       </div>
     </Screen>
@@ -90,17 +101,23 @@ function SettingsScreen() {
 }
 
 function StatsScreen() {
-  const [tab, setTab] = useState('summary')
+  const { tab, year, setTab, setYear } = useStatsTab()
+  const s = useStats(year)
   return (
     <Screen
       title="통계"
+      stickyHeader
       header={
         <div className="scrollbar-none -my-1 overflow-x-auto py-1">
-          <Segmented options={STATS_TABS} value={tab} onChange={setTab} size="sm" />
+          <UnderlineTabs options={STATS_TABS} value={tab} onChange={setTab} />
         </div>
       }
     >
-      <StatsView platform="mobile" tab={tab} />
+      {s && (
+        <StatsContent s={s} platform="mobile" tab={tab}>
+          {hasYearPicker(tab, s) && <YearMenu years={s.years} value={year} onChange={setYear} />}
+        </StatsContent>
+      )}
     </Screen>
   )
 }
@@ -180,18 +197,9 @@ function ReviewsScreen() {
   return (
     <Screen
       title="독후감"
+      stickyHeader
+      header={<UnderlineTabs options={REVIEW_TABS} value="recent" onChange={() => {}} />}
       search={{ value: search, onChange: setSearch, placeholder: '제목, 내용, 책 이름' }}
-      trailing={
-        <Glass
-          as="button"
-          refract
-          onClick={() => nav.newReview()}
-          aria-label="새 독후감"
-          className="flex size-11 shrink-0 items-center justify-center rounded-full"
-        >
-          <NotePencilIcon size={22} />
-        </Glass>
-      }
     >
       <div className="px-4">
         {reviews?.length === 0 && search.trim() ? (
@@ -357,6 +365,13 @@ export function MobileShell() {
           current={tab}
           hidden={!!bookMatch || !!reviewMatch}
           onTab={(path) => navigate(path, { replace: true })}
+          action={
+            tab === '/'
+              ? { key: 'add', label: '책 추가', Icon: PlusIcon, onClick: () => nav.openAdd() }
+              : tab === '/reviews'
+                ? { key: 'write', label: '새 독후감', Icon: NotePencilIcon, onClick: () => nav.newReview() }
+                : null
+          }
         />
       </div>
 

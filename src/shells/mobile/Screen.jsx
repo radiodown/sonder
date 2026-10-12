@@ -81,12 +81,14 @@ function SearchBar({ height, open, value, onChange, placeholder, onCancel }) {
  * iOS 화면 틀. 제목은 화면에 쓰지 않고(탭바로 충분), 스크롤하면 상태 막대 뒤에 유리 바가 나타납니다.
  * header 는 맨 윗줄 왼쪽, trailing 은 같은 줄 오른쪽에 놓입니다.
  * search 를 주면 그 아래에 끌어내려 여는 검색창이 생깁니다: { value, onChange, placeholder }
+ * stickyHeader 면 그 윗줄이 스크롤해도 맨 위에 붙어 있고, 유리 바도 그 줄까지 덮습니다 (화면 안 탭 같은 것).
  * 하단은 탭바가 덮으므로 여백을 둡니다.
  */
-export function Screen({ title, header, trailing, search, children }) {
+export function Screen({ title, header, trailing, search, stickyHeader = false, children }) {
   const ref = useRef(null)
   const { scrollY } = useScroll({ container: ref })
-  const barOpacity = useTransform(scrollY, [24, 56], [0, 1])
+  // 붙는 줄은 처음부터 맨 위에 있으므로 내용이 그 밑으로 들어가자마자 바를 보입니다
+  const barOpacity = useTransform(scrollY, stickyHeader ? [0, 16] : [24, 56], [0, 1])
   const reveal = usePullReveal(ref, !!search)
 
   return (
@@ -94,14 +96,18 @@ export function Screen({ title, header, trailing, search, children }) {
       <motion.div
         style={{ opacity: barOpacity }}
         className="glass glass-flat pt-safe pointer-events-none absolute inset-x-0 top-0 z-10 rounded-none"
-      />
+      >
+        {stickyHeader && <div className="h-14" />}
+      </motion.div>
       <div
         ref={ref}
         {...reveal.handlers}
         aria-label={title}
         className="pt-safe h-full overflow-y-auto overscroll-contain pb-36"
       >
-        <div className="flex min-h-4 items-center gap-3 pb-3 pl-5 pr-4 pt-2">
+        <div
+          className={`flex items-center gap-3 pl-5 pr-4 ${stickyHeader ? 'sticky top-[env(safe-area-inset-top)] z-20 mb-2 h-14' : 'min-h-4 pb-3 pt-2'}`}
+        >
           <div className="min-w-0 flex-1">{header}</div>
           {trailing}
         </div>

@@ -1,4 +1,5 @@
-import { PencilSimpleIcon } from '@phosphor-icons/react'
+import { CaretDownIcon, CheckIcon, PencilSimpleIcon } from '@phosphor-icons/react'
+import * as DM from '@radix-ui/react-dropdown-menu'
 import { useState } from 'react'
 import { useNav } from '../../lib/nav'
 import { useSettings } from '../../stores/settings'
@@ -8,7 +9,7 @@ import { BadgesCard } from './BadgesCard'
 import { BookStackCard } from './BookStackCard'
 import { Card, ColumnChart, RankBars, StackedBar, StatTile } from './charts'
 import { Heatmap } from './Heatmap'
-import { STATS_TABS } from './stats'
+import { STATS_TABS, hasYearPicker } from './stats'
 import { useStats } from './useStats'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => `${i + 1}월`)
@@ -132,34 +133,52 @@ function MonthlyTable({ s }) {
   )
 }
 
+const menuCls = 'glass glass-strong z-[10000] min-w-32 rounded-xl p-1.5 text-[15px] text-ink'
+const itemCls =
+  'relative flex cursor-default items-center rounded-md py-1.5 pl-7 pr-3 outline-none data-[highlighted]:bg-accent data-[highlighted]:text-white'
+
+/** 모바일 통계 본문 맨 위의 연도 정보 줄 (책장의 정렬 줄과 같은 모양) */
+export function YearMenu({ years, value, onChange }) {
+  return (
+    <DM.Root modal={false}>
+      <DM.Trigger className="-mb-1 flex items-center gap-1 self-start text-[13px] font-medium text-ink-2 outline-none active:opacity-60">
+        {value}년
+        <CaretDownIcon size={11} weight="bold" />
+      </DM.Trigger>
+      <DM.Portal>
+        <DM.Content align="start" sideOffset={6} className={menuCls}>
+          <DM.RadioGroup value={String(value)} onValueChange={(v) => onChange(Number(v))}>
+            {years.map((y) => (
+              <DM.RadioItem key={y} value={String(y)} className={itemCls}>
+                <DM.ItemIndicator className="absolute left-2">
+                  <CheckIcon size={13} weight="bold" />
+                </DM.ItemIndicator>
+                {y}년
+              </DM.RadioItem>
+            ))}
+          </DM.RadioGroup>
+        </DM.Content>
+      </DM.Portal>
+    </DM.Root>
+  )
+}
+
 /**
- * 통계 화면. 데스크톱 창과 모바일 탭이 함께 씁니다.
+ * 통계 본문. 데스크톱 창과 모바일 탭이 함께 씁니다. s 는 useStats(연도) 의 결과.
  * - 요약: 독서 캘린더 · 목표 · 숫자
  * - 분석: 월별 · 요일별 · 작가/출판사
  * - 책장: 책장 전체 기준 (상태 · 별점 · 쌓아 보면 · 오래 기다린 책)
  * - 배지
- * 연도 선택은 '요약'과 '분석'에만 보이고, 탭을 오가도 유지됩니다.
+ * 연도 고르기는 각 셸이 children 으로 본문 맨 위에 놓습니다 (데스크톱: 알약, 모바일: 정보 줄 메뉴).
  */
-export function StatsView({ platform, tab = 'summary' }) {
+export function StatsContent({ s, platform, tab = 'summary', children }) {
   const nav = useNav()
-  const [year, setYear] = useState(() => new Date().getFullYear())
-  const s = useStats(year)
-  if (!s) return null
   const mobile = platform === 'mobile'
-  const yearly = tab === 'summary' || tab === 'insights'
+  const { year } = s
 
   return (
     <div className={`flex flex-col gap-4 ${mobile ? 'px-4' : 'px-6 pb-8'}`}>
-      {yearly && s.years.length > 1 && (
-        <div className="scrollbar-none overflow-x-auto">
-          <Segmented
-            size="sm"
-            value={year}
-            onChange={setYear}
-            options={s.years.map((y) => ({ value: y, label: `${y}년` }))}
-          />
-        </div>
-      )}
+      {children}
 
       {tab === 'summary' && (
         <>
@@ -273,9 +292,11 @@ export function StatsView({ platform, tab = 'summary' }) {
   )
 }
 
-/** 데스크톱 창: 통합 툴바(제목 · 탭) + 통계 */
+/** 데스크톱 창: 통합 툴바(제목 · 탭) + 통계. 연도는 본문 맨 위에서 고르고, 탭을 오가도 유지됩니다. */
 export function StatsWindow() {
   const [tab, setTab] = useState('summary')
+  const [year, setYear] = useState(() => new Date().getFullYear())
+  const s = useStats(year)
   return (
     <div className="flex h-full flex-col">
       <header className="window-drag relative flex h-[52px] shrink-0 items-center px-24">
@@ -285,7 +306,15 @@ export function StatsWindow() {
         </div>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto pt-1">
-        <StatsView platform="desktop" tab={tab} />
+        {s && (
+          <StatsContent s={s} platform="desktop" tab={tab}>
+            {hasYearPicker(tab, s) && (
+              <div className="scrollbar-none overflow-x-auto">
+                <Segmented size="sm" value={year} onChange={setYear} options={s.years.map((y) => ({ value: y, label: `${y}년` }))} />
+              </div>
+            )}
+          </StatsContent>
+        )}
       </div>
     </div>
   )

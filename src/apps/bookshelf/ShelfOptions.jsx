@@ -1,8 +1,6 @@
 import * as DM from '@radix-ui/react-dropdown-menu'
-import { CaretDownIcon, CheckIcon, DiceFiveIcon, DotsThreeIcon, PlusIcon, SquaresFourIcon } from '@phosphor-icons/react'
-import { useNav } from '../../lib/nav'
+import { CaretDownIcon, CheckIcon, DiceFiveIcon, SquaresFourIcon } from '@phosphor-icons/react'
 import { openPicker } from '../../stores/picker'
-import { Glass } from '../../ui/Glass'
 import { Segmented } from '../../ui/Segmented'
 import { SIZE_STEPS, SORTS, VIEWS, useShelfPrefs } from './shelfPrefs'
 
@@ -70,53 +68,69 @@ export function DesktopShelfControls() {
   )
 }
 
-/** 모바일: 제목 옆 ⋯ 버튼 하나에 보기 · 정렬 · 크기를 모읍니다 (iOS 파일 앱처럼) */
-export function MobileShelfMenu() {
+// 모바일 정보 줄의 글자 버튼
+const infoBtnCls = 'flex items-center gap-1 font-medium outline-none active:opacity-60'
+
+/**
+ * 모바일: 책 목록 맨 위의 작은 정보 줄. 왼쪽은 권수 · 정렬, 오른쪽은 보기 · 크기.
+ * 아이콘 대신 지금 상태를 글자로 보여 주고, 누르면 그 자리에서 메뉴가 열립니다. (스크롤하면 함께 사라짐)
+ */
+export function MobileShelfInfo({ count }) {
   const p = useShelfPrefs()
-  const nav = useNav()
   return (
-    <DM.Root modal={false}>
-      <DM.Trigger asChild>
-        <Glass
-          as="button"
-          refract
-          aria-label="보기 옵션"
-          className="flex size-11 shrink-0 items-center justify-center rounded-full outline-none"
-        >
-          <DotsThreeIcon size={24} weight="bold" />
-        </Glass>
-      </DM.Trigger>
-      <DM.Portal>
-        <DM.Content align="end" sideOffset={8} className={`${menuCls} min-w-44 text-[15px]`}>
-          <DM.Item onSelect={() => nav.openAdd()} className={`${itemCls} font-medium`}>
-            <PlusIcon size={15} weight="bold" className="absolute left-2" />책 추가…
-          </DM.Item>
-          <DM.Item onSelect={openPicker} className={`${itemCls} font-medium`}>
-            <DiceFiveIcon size={15} weight="bold" className="absolute left-2" />다음 책 뽑기
-          </DM.Item>
-          <DM.Separator className="mx-2 my-1 h-px bg-line" />
-          <MenuLabel>보기</MenuLabel>
-          <RadioItems
-            options={VIEWS.map(({ value, label }) => ({ value, label }))}
-            value={p.view}
-            onChange={p.setView}
-          />
-          <DM.Separator className="mx-2 my-1 h-px bg-line" />
-          <MenuLabel>정렬</MenuLabel>
-          <RadioItems options={SORTS} value={p.sort} onChange={p.setSort} />
-          {p.view !== 'list' && (
-            <>
-              <DM.Separator className="mx-2 my-1 h-px bg-line" />
-              <MenuLabel>크기</MenuLabel>
-              <RadioItems
-                options={SIZE_STEPS}
-                value={SIZE_STEPS.reduce((best, s) => (Math.abs(s.value - p.scale) < Math.abs(best.value - p.scale) ? s : best)).value}
-                onChange={p.setScale}
-              />
-            </>
-          )}
-        </DM.Content>
-      </DM.Portal>
-    </DM.Root>
+    <div className="mb-3 flex items-center justify-between text-[13px] text-ink-2">
+      <DM.Root modal={false}>
+        <DM.Trigger className={infoBtnCls}>
+          <span className="font-normal text-ink-3">{count}권 ·</span>
+          {SORTS.find((s) => s.value === p.sort)?.label}
+          <CaretDownIcon size={11} weight="bold" />
+        </DM.Trigger>
+        <DM.Portal>
+          <DM.Content align="start" sideOffset={6} className={`${menuCls} min-w-40 text-[15px]`}>
+            <MenuLabel>정렬</MenuLabel>
+            <RadioItems options={SORTS} value={p.sort} onChange={p.setSort} />
+          </DM.Content>
+        </DM.Portal>
+      </DM.Root>
+      <DM.Root modal={false}>
+        <DM.Trigger className={infoBtnCls}>
+          {VIEWS.find((v) => v.value === p.view)?.label}
+          <CaretDownIcon size={11} weight="bold" />
+        </DM.Trigger>
+        <DM.Portal>
+          <DM.Content align="end" sideOffset={6} className={`${menuCls} min-w-40 text-[15px]`}>
+            <MenuLabel>보기</MenuLabel>
+            <RadioItems options={VIEWS.map(({ value, label }) => ({ value, label }))} value={p.view} onChange={p.setView} />
+            {p.view !== 'list' && (
+              <>
+                <DM.Separator className="mx-2 my-1 h-px bg-line" />
+                <MenuLabel>크기</MenuLabel>
+                <RadioItems
+                  options={SIZE_STEPS}
+                  value={SIZE_STEPS.reduce((best, s) => (Math.abs(s.value - p.scale) < Math.abs(best.value - p.scale) ? s : best)).value}
+                  onChange={p.setScale}
+                />
+              </>
+            )}
+          </DM.Content>
+        </DM.Portal>
+      </DM.Root>
+    </div>
+  )
+}
+
+/** 모바일 '읽고 싶은' 탭 맨 위: 다음 책 뽑기. 뽑는 대상이 바로 이 목록이라 여기에 둡니다. */
+export function PickNextCard() {
+  return (
+    <button
+      onClick={openPicker}
+      className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-3 text-left active:opacity-70 dark:bg-white/[0.07]"
+    >
+      <DiceFiveIcon size={24} weight="duotone" className="shrink-0 text-accent" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-semibold">다음에 읽을 책 뽑기</span>
+        <span className="text-xs text-ink-2">읽고 싶은 책 중에서 한 권 골라 드려요</span>
+      </span>
+    </button>
   )
 }
