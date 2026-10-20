@@ -1,4 +1,6 @@
 import {
+  CaretDownIcon,
+  CheckIcon,
   HighlighterIcon,
   ListBulletsIcon,
   ListNumbersIcon,
@@ -11,7 +13,7 @@ import {
   TextStrikethroughIcon,
   TextUnderlineIcon,
 } from '@phosphor-icons/react'
-import Highlight from '@tiptap/extension-highlight'
+import * as DM from '@radix-ui/react-dropdown-menu'
 import { CharacterCount, Placeholder } from '@tiptap/extensions'
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -24,6 +26,7 @@ import { formatReviewDate, useReview } from './hooks'
 import { pasteHtmlSource } from './pasteHtml'
 import { setReviewEditing, useReviewMode } from '../../stores/reviewMode'
 import { useVisibleBottom } from '../../lib/visibleBottom'
+import { DEFAULT_HIGHLIGHT_COLOR, HIGHLIGHT_COLORS, ReviewHighlight } from './highlight'
 
 // 편집기가 열려 있는 독후감 id → 열린 수. StrictMode 의 mount→unmount→mount 에도
 // 빈 독후감이 지워지지 않도록, 닫힌 뒤 한 틱 기다렸다가 아무도 열고 있지 않을 때만 정리합니다.
@@ -61,6 +64,7 @@ function FormatButton({ active, onClick, label, children }) {
 }
 
 function FormatBar({ editor }) {
+  const [highlightColor, setHighlightColor] = useState(() => editor.storage.highlight.color)
   const s = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -71,12 +75,19 @@ function FormatBar({ editor }) {
       underline: e.isActive('underline'),
       strike: e.isActive('strike'),
       highlight: e.isActive('highlight'),
+      highlightColor: e.getAttributes('highlight').color,
       bullet: e.isActive('bulletList'),
       ordered: e.isActive('orderedList'),
       quote: e.isActive('blockquote'),
     }),
   })
   const c = () => editor.chain().focus()
+  const currentColor = s.highlight ? s.highlightColor || DEFAULT_HIGHLIGHT_COLOR : highlightColor
+  const currentSwatch = HIGHLIGHT_COLORS.find(({ color }) => color === currentColor)
+  const chooseHighlightColor = (color) => {
+    setHighlightColor(color)
+    c().setHighlightColor(color).setHighlight({ color }).run()
+  }
   const sz = 17
   return (
     <Glass className="scrollbar-none flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full p-1">
@@ -99,11 +110,58 @@ function FormatBar({ editor }) {
       <FormatButton label="취소선" active={s.strike} onClick={() => c().toggleStrike().run()}>
         <TextStrikethroughIcon size={sz} weight="bold" />
       </FormatButton>
-      <FormatButton label="형광펜" active={s.highlight} onClick={() => c().toggleHighlight().run()}>
-        <span className="flex items-center border-b-2 border-yellow-400">
+      <FormatButton label="형광펜" active={s.highlight} onClick={() => c().toggleHighlight({ color: currentColor }).run()}>
+        <span className="flex items-center border-b-2" style={{ borderColor: currentSwatch ? currentSwatch.color.slice(0, 7) : currentColor }}>
           <HighlighterIcon size={sz} weight="bold" />
         </span>
       </FormatButton>
+      <DM.Root modal={false}>
+        <DM.Trigger asChild>
+          <button
+            type="button"
+            aria-label="형광펜 색상"
+            title="형광펜 색상"
+            onMouseDown={(e) => e.preventDefault()}
+            className="flex h-8 w-6 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 data-[state=open]:bg-fill"
+          >
+            <CaretDownIcon size={12} weight="bold" />
+          </button>
+        </DM.Trigger>
+        <DM.Portal>
+          <DM.Content
+            align="center"
+            sideOffset={8}
+            collisionPadding={12}
+            onCloseAutoFocus={(e) => {
+              e.preventDefault()
+              editor.commands.focus()
+            }}
+            className="glass glass-strong z-[10000] min-w-36 rounded-xl p-1.5 text-[13px] text-ink"
+          >
+            <DM.Label className="px-2.5 pb-1 pt-1 text-[11px] font-semibold text-ink-2">형광펜 색상</DM.Label>
+            <DM.RadioGroup value={currentColor} onValueChange={chooseHighlightColor}>
+              {HIGHLIGHT_COLORS.map(({ label, color }) => (
+                <DM.RadioItem
+                  key={color}
+                  value={color}
+                  className="flex cursor-default items-center gap-2.5 rounded-md px-2.5 py-2 outline-none data-[highlighted]:bg-fill"
+                >
+                  <span aria-hidden="true" className="size-4 shrink-0 rounded-full" style={{ backgroundColor: color.slice(0, 7) }} />
+                  <span className="flex-1">{label}</span>
+                  <DM.ItemIndicator><CheckIcon size={14} weight="bold" /></DM.ItemIndicator>
+                </DM.RadioItem>
+              ))}
+            </DM.RadioGroup>
+            <DM.Separator className="my-1 h-px bg-line" />
+            <DM.Item
+              onSelect={() => c().unsetHighlight().run()}
+              className="cursor-default rounded-md px-2.5 py-2 outline-none data-[highlighted]:bg-fill"
+            >
+              형광펜 지우기
+            </DM.Item>
+          </DM.Content>
+        </DM.Portal>
+      </DM.Root>
       <span className="mx-1 h-5 w-px shrink-0 bg-line" />
       <FormatButton label="글머리 기호" active={s.bullet} onClick={() => c().toggleBulletList().run()}>
         <ListBulletsIcon size={sz} weight="bold" />
@@ -175,7 +233,7 @@ function EditorBody({ review, onOpenBook, autoFocus, toolbarClassName, keyboardT
     editable: startEditing,
     extensions: [
       StarterKit.configure({ heading: { levels: [2, 3] }, link: false }),
-      Highlight,
+      ReviewHighlight,
       Placeholder.configure({ placeholder: '이 책을 읽고 무엇을 느꼈나요?' }),
       CharacterCount,
     ],
