@@ -412,6 +412,13 @@ html[data-refract="on"] .glass-refract {
   background: var(--fill);
   font-size: 0.9em;
 }
+.review-prose mark {
+  border-radius: 0.15em;
+  background-color: #facc1566;
+  color: inherit;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
 .review-prose p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;

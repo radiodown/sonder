@@ -45,6 +45,9 @@ function inline(node, md) {
       case 'CODE':
         out += md ? `\`${inner}\`` : inner
         break
+      case 'MARK':
+        out += md && inner.trim() ? `==${inner}==` : inner
+        break
       case 'A':
         out += md && n.getAttribute('href') ? `[${inner}](${n.getAttribute('href')})` : inner
         break
@@ -151,6 +154,7 @@ function toHtml(review, book) {
   cite { font-style: normal; font-weight: 600; }
   blockquote { margin: 1.2em 0; padding: .2em 1em; border-left: 3px solid #d2d2d7; color: #424245; }
   hr { border: 0; border-top: 1px solid #d2d2d7; margin: 2.5em 0; }
+  mark { border-radius: .15em; background-color: #facc1566; color: inherit; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
   @media (prefers-color-scheme: dark) { body { background: #111; color: #f5f5f7; } .meta, blockquote { color: #a1a1a6; } blockquote, hr { border-color: #3a3a3c; } }
 </style>
 </head>

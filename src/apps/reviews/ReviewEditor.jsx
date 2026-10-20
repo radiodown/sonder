@@ -1,4 +1,5 @@
 import {
+  HighlighterIcon,
   ListBulletsIcon,
   ListNumbersIcon,
   MinusIcon,
@@ -10,6 +11,7 @@ import {
   TextStrikethroughIcon,
   TextUnderlineIcon,
 } from '@phosphor-icons/react'
+import Highlight from '@tiptap/extension-highlight'
 import { CharacterCount, Placeholder } from '@tiptap/extensions'
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -68,6 +70,7 @@ function FormatBar({ editor }) {
       italic: e.isActive('italic'),
       underline: e.isActive('underline'),
       strike: e.isActive('strike'),
+      highlight: e.isActive('highlight'),
       bullet: e.isActive('bulletList'),
       ordered: e.isActive('orderedList'),
       quote: e.isActive('blockquote'),
@@ -95,6 +98,11 @@ function FormatBar({ editor }) {
       </FormatButton>
       <FormatButton label="취소선" active={s.strike} onClick={() => c().toggleStrike().run()}>
         <TextStrikethroughIcon size={sz} weight="bold" />
+      </FormatButton>
+      <FormatButton label="형광펜" active={s.highlight} onClick={() => c().toggleHighlight().run()}>
+        <span className="flex items-center border-b-2 border-yellow-400">
+          <HighlighterIcon size={sz} weight="bold" />
+        </span>
       </FormatButton>
       <span className="mx-1 h-5 w-px shrink-0 bg-line" />
       <FormatButton label="글머리 기호" active={s.bullet} onClick={() => c().toggleBulletList().run()}>
@@ -167,6 +175,7 @@ function EditorBody({ review, onOpenBook, autoFocus, toolbarClassName, keyboardT
     editable: startEditing,
     extensions: [
       StarterKit.configure({ heading: { levels: [2, 3] }, link: false }),
+      Highlight,
       Placeholder.configure({ placeholder: '이 책을 읽고 무엇을 느꼈나요?' }),
       CharacterCount,
     ],
